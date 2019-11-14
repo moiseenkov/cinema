@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'pmdovwg8qqkh*cu%&2k6r)@6$kv9wffk8@l$qx1u4kd2#qx*4k'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -75,13 +75,15 @@ AUTH_USER_MODEL = 'booking.CustomUser'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
+POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+POSTGRES_USER = os.environ.get('POSTGRES_USER')
+POSTGRES_DB_NAME = os.environ.get('POSTGRES_DB_NAME')
 DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': 'postgres',
-                    'USER': 'postgres',
-                    'PASSWORD': 'secret',
+                    'NAME': POSTGRES_DB_NAME,
+                    'USER': POSTGRES_USER,
+                    'PASSWORD': POSTGRES_PASSWORD,
                     'HOST': 'db',
                     'PORT': '5432',
                 },
