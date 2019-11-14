@@ -70,6 +70,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cinema.wsgi.application'
 
+AUTH_USER_MODEL = 'booking.CustomUser'
+
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
