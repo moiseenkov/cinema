@@ -6,6 +6,9 @@ from .managers import CustomUserManager
 
 
 class CustomUser(AbstractUser):
+    class Meta:
+        ordering = ['-id']
+
     username = None
     email = models.EmailField(_('email address'), unique=True)
 
