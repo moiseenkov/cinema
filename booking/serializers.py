@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from booking.models import CustomUser, Hall
+from booking.models import CustomUser, Hall, Movie
 
 
 class CustomUserPasswordHashMixin:
@@ -33,3 +33,9 @@ class HallSerializer(ModelSerializer):
 
     def get_seats_count(self, obj):
         return obj.rows_count * obj.rows_size
+
+
+class MovieSerializer(ModelSerializer):
+    class Meta:
+        model = Movie
+        fields = ['id', 'name', 'duration', 'premiere_year']

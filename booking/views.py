@@ -2,12 +2,12 @@ import django_filters
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from booking.models import CustomUser, Hall
-from booking.serializers import CustomUserSerializer, CustomUserAdminSerializer, HallSerializer
+from booking import serializers
+from booking import models
 
 
 @api_view(['GET'])
@@ -20,6 +20,7 @@ def api_root(request, format_=None):
         'token': reverse('token', request=request, format=format_),
         'token/refresh': reverse('token-refresh', request=request, format=format_),
         'halls': reverse('hall-list', request=request, format=format_),
+        'movies': reverse('movie-list', request=request, format=format_),
     })
 
 
@@ -33,20 +34,30 @@ class UsersFilterMixin:
         return queryset.all()
 
 
+class PermissionSelectorMixin:
+    def get_permissions(self):
+        try:
+            # return permission_classes depending on `request.method`
+            return [permission() for permission in self.permission_classes_by_method[self.request.method]]
+        except KeyError:
+            # method is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
+
+
 class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
     """
     Returns list of available users and allows to create new user
     """
     permission_classes = [IsAuthenticated]
-    queryset = CustomUser.objects.all()
+    queryset = models.CustomUser.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_fields = ['email', 'is_staff', 'is_active']
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
-            return CustomUserAdminSerializer
+            return serializers.CustomUserAdminSerializer
         else:
-            return CustomUserSerializer
+            return serializers.CustomUserSerializer
 
 
 class CustomUserDetail(UsersFilterMixin, RetrieveUpdateDestroyAPIView):
@@ -54,13 +65,13 @@ class CustomUserDetail(UsersFilterMixin, RetrieveUpdateDestroyAPIView):
     Returns user's information and allows to update and delete it
     """
     permission_classes = [IsAuthenticated]
-    queryset = CustomUser.objects.all()
+    queryset = models.CustomUser.objects.all()
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
-            return CustomUserAdminSerializer
+            return serializers.CustomUserAdminSerializer
         else:
-            return CustomUserSerializer
+            return serializers.CustomUserSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -69,36 +80,61 @@ class CustomUserDetail(UsersFilterMixin, RetrieveUpdateDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class HallsList(ListCreateAPIView):
+class HallsList(PermissionSelectorMixin, ListCreateAPIView):
     """
     Returns list of cinema halls and allows admin to create new hall
     """
-    serializer_class = HallSerializer
+    serializer_class = serializers.HallSerializer
     permission_classes = [AllowAny]
-    queryset = Hall.objects.all()
+    queryset = models.Hall.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_fields = ['name', ]
 
-    def post(self, request, *args, **kwargs):
-        if not request.user or not request.user.is_staff:
-            return Response(data='You are not allowed to create halls', status=status.HTTP_403_FORBIDDEN)
-        return super().post(request, *args, **kwargs)
+    permission_classes_by_method = {
+        'POST': (IsAdminUser, ),
+    }
 
 
-class HallsDetail(RetrieveUpdateDestroyAPIView):
+class HallsDetail(PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
     Returns detailed information about cinema hall. Admins allowed to create, update and delete it
     """
-    serializer_class = HallSerializer
+    serializer_class = serializers.HallSerializer
     permission_classes = [AllowAny]
-    queryset = Hall.objects.all()
+    queryset = models.Hall.objects.all()
 
-    def update(self, request, *args, **kwargs):
-        if not request.user or not request.user.is_staff:
-            return Response(data='You are not allowed to update halls', status=status.HTTP_403_FORBIDDEN)
-        return super().update(request, *args, **kwargs)
+    permission_classes_by_method = {
+        'PUT': (IsAdminUser, ),
+        'PATCH': (IsAdminUser,),
+        'DELETE': (IsAdminUser,),
+    }
 
-    def delete(self, request, *args, **kwargs):
-        if not request.user or not request.user.is_staff:
-            return Response(data='You are not allowed to update halls', status=status.HTTP_403_FORBIDDEN)
-        return super().delete(request, *args, **kwargs)
+
+class MoviesListView(PermissionSelectorMixin, ListCreateAPIView):
+    """
+    Returns list of movies and allows admin to create movie
+    """
+    serializer_class = serializers.MovieSerializer
+    permission_classes = [AllowAny]
+    queryset = models.Movie.objects.all()
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_fields = ['name', 'duration', 'premiere_year']
+
+    permission_classes_by_method = {
+        'POST': (IsAdminUser,),
+    }
+
+
+class MoviesDetail(PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
+    """
+    Returns detailed information about cinema hall. Admins allowed to create, update and delete it
+    """
+    serializer_class = serializers.MovieSerializer
+    permission_classes = [AllowAny]
+    queryset = models.Movie.objects.all()
+
+    permission_classes_by_method = {
+        'PUT': (IsAdminUser, ),
+        'PATCH': (IsAdminUser,),
+        'DELETE': (IsAdminUser,),
+    }
