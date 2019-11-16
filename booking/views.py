@@ -1,6 +1,5 @@
-from rest_framework import mixins
 from rest_framework.decorators import api_view
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, GenericAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -21,7 +20,7 @@ def api_root(request, format_=None):
     })
 
 
-class CinemaGenericAPIView(GenericAPIView):
+class UsersFilterMixin:
     """
     Custom GenericAPIView
     """
@@ -31,40 +30,7 @@ class CinemaGenericAPIView(GenericAPIView):
         return queryset.all()
 
 
-class CinemaListCreateAPIView(mixins.ListModelMixin,
-                              mixins.CreateModelMixin,
-                              CinemaGenericAPIView):
-    """
-    Custom ListCreateAPIView
-    """
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-
-
-class CinemaRetrieveUpdateDestroyAPIView(mixins.RetrieveModelMixin,
-                                         mixins.UpdateModelMixin,
-                                         mixins.DestroyModelMixin,
-                                         CinemaGenericAPIView):
-    """
-    Custom RetrieveUpdateDestroyAPIView
-    """
-    def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
-
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    def patch(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
-
-
-class CustomUsersList(CinemaListCreateAPIView):
+class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
     """
     Returns list of available users and allows to create new user
     """
@@ -73,7 +39,7 @@ class CustomUsersList(CinemaListCreateAPIView):
     queryset = CustomUser.objects.all()
 
 
-class CustomUserDetailed(CinemaRetrieveUpdateDestroyAPIView):
+class CustomUserDetail(UsersFilterMixin, RetrieveUpdateDestroyAPIView):
     """
     Returns user's information and allows to update and delete it
     """
