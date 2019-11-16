@@ -1,3 +1,4 @@
+import django_filters
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -37,6 +38,8 @@ class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
     """
     permission_classes = [IsAuthenticated]
     queryset = CustomUser.objects.all()
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_fields = ['email', 'is_staff', 'is_active']
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
