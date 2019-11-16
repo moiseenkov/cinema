@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import ugettext_lazy as _
@@ -23,3 +24,16 @@ class CustomUser(AbstractUser):
     def delete(self, using=None, keep_parents=False):
         self.is_active = False
         self.save()
+
+
+class Hall(models.Model):
+    name = models.fields.CharField(verbose_name='Hall name', max_length=32, blank=False)
+    rows_count = models.fields.IntegerField(verbose_name='Rows count', validators=[MinValueValidator(1)])
+    rows_size = models.fields.IntegerField(verbose_name='Rows size (seats count)', validators=[MinValueValidator(1)])
+
+    class Meta:
+        verbose_name = 'Cinema hall'
+        verbose_name_plural = 'Cinema halls'
+
+    def __str__(self):
+        return self.name + ' (' + str(self.rows_count) + 'x' + str(self.rows_size) + ')'

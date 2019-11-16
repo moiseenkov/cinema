@@ -1,7 +1,9 @@
 from django.contrib import admin
+from django.contrib.admin import ModelAdmin
 from django.contrib.auth.admin import UserAdmin
 
 from booking.forms import CustomUserCreationForm, CustomUserChangeForm
+from booking.models import Hall
 from .models import CustomUser
 
 
@@ -25,4 +27,10 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('email',)
 
 
+class HallAdmin(ModelAdmin):
+    list_display = ('id', 'name', 'rows_count', 'rows_size')
+    readonly_fields = ('id', )
+
+
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Hall, HallAdmin)
