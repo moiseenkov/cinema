@@ -38,3 +38,19 @@ class Hall(models.Model):
 
     def __str__(self):
         return str(self.name) + ' (' + str(self.rows_count) + 'x' + str(self.rows_size) + ')'
+
+
+class Movie(models.Model):
+    name = models.fields.CharField(verbose_name='Title', max_length=128, blank=False)
+    duration = models.fields.IntegerField(verbose_name='Duration', validators=[MinValueValidator(1)])
+    premiere_year = models.IntegerField(verbose_name='Premiere Year', validators=[MinValueValidator(1896)],
+                                        blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Movie'
+        verbose_name_plural = 'Movies'
+        ordering = ['-id']
+        unique_together = ['name', 'premiere_year']
+
+    def __str__(self):
+        return str(self.name) + str(self.premiere_year or '')

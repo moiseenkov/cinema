@@ -3,7 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.auth.admin import UserAdmin
 
 from booking.forms import CustomUserCreationForm, CustomUserChangeForm
-from booking.models import Hall
+from booking.models import Hall, Movie
 from .models import CustomUser
 
 
@@ -32,5 +32,11 @@ class HallAdmin(ModelAdmin):
     readonly_fields = ('id', )
 
 
+class MovieAdmin(ModelAdmin):
+    list_display = ('id', 'name', 'duration', 'premiere_year')
+    readonly_fields = ('id', )
+
+
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Hall, HallAdmin)
+admin.site.register(Movie, MovieAdmin)
