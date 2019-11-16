@@ -1,6 +1,7 @@
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from booking.models import CustomUser
+from booking.models import CustomUser, Hall
 
 
 class CustomUserPasswordHashMixin:
@@ -21,3 +22,14 @@ class CustomUserAdminSerializer(CustomUserPasswordHashMixin, ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['id', 'email', 'is_staff', 'is_active', 'password']
+
+
+class HallSerializer(ModelSerializer):
+    seats_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Hall
+        fields = ['id', 'name', 'rows_count', 'rows_size', 'seats_count']
+
+    def get_seats_count(self, obj):
+        return obj.rows_count * obj.rows_size
