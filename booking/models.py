@@ -34,6 +34,7 @@ class Hall(models.Model):
     class Meta:
         verbose_name = 'Cinema hall'
         verbose_name_plural = 'Cinema halls'
+        ordering = ['-id']
 
     def __str__(self):
         return self.name + ' (' + str(self.rows_count) + 'x' + str(self.rows_size) + ')'
