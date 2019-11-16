@@ -37,4 +37,4 @@ class Hall(models.Model):
         ordering = ['-id']
 
     def __str__(self):
-        return self.name + ' (' + str(self.rows_count) + 'x' + str(self.rows_size) + ')'
+        return str(self.name) + ' (' + str(self.rows_count) + 'x' + str(self.rows_size) + ')'
