@@ -27,7 +27,7 @@ class CustomUser(AbstractUser):
 
 
 class Hall(models.Model):
-    name = models.fields.CharField(verbose_name='Hall name', max_length=32, blank=False)
+    name = models.fields.CharField(verbose_name='Hall name', max_length=32, blank=False, unique=True)
     rows_count = models.fields.IntegerField(verbose_name='Rows count', validators=[MinValueValidator(1)])
     rows_size = models.fields.IntegerField(verbose_name='Rows size (seats count)', validators=[MinValueValidator(1)])
 
