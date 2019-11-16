@@ -1,12 +1,12 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView, CreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from booking.models import CustomUser
-from booking.serializers import CustomUserSerializer, CustomUserAdminSerializer, CustomUserCreateSerializer
+from booking.serializers import CustomUserSerializer, CustomUserAdminSerializer
 
 
 @api_view(['GET'])
@@ -39,8 +39,8 @@ class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
     queryset = CustomUser.objects.all()
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return CustomUserCreateSerializer
+        if self.request.user and self.request.user.is_staff:
+            return CustomUserAdminSerializer
         else:
             return CustomUserSerializer
 
