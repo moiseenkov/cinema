@@ -59,14 +59,14 @@ class Movie(models.Model):
 class Showing(models.Model):
     hall = models.ForeignKey(to=Hall, on_delete=models.PROTECT)
     movie = models.ForeignKey(to=Movie, on_delete=models.PROTECT)
-    time = models.DateTimeField()
+    date_time = models.DateTimeField()
     price = models.DecimalField(max_digits=32, decimal_places=2, validators=[MinValueValidator(0.0)])
 
     class Meta:
         verbose_name = 'Showing'
         verbose_name_plural = 'Showings'
-        ordering = ['-time']
-        unique_together = ['hall', 'movie', 'time']
+        ordering = ['-date_time']
+        unique_together = ['hall', 'movie', 'date_time']
 
     def __str__(self):
-        return str(self.movie) + ', ' + str(self.time) + ', ' + str(self.hall) + ', $' + str(self.price)
+        return str(self.movie) + ', ' + str(self.date_time) + ', ' + str(self.hall) + ', $' + str(self.price)

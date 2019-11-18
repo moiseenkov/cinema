@@ -158,7 +158,7 @@ class ShowingsListView(PermissionSelectorMixin, ListCreateAPIView):
     permission_classes = [AllowAny]
     queryset = models.Showing.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
-    filterset_fields = ['hall', 'movie', 'time', 'price']
+    filterset_fields = ['hall', 'movie', 'date_time', 'price']
 
     permission_classes_by_method = {
         'POST': (IsAdminUser, ),

@@ -1,7 +1,10 @@
+import datetime
+
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from booking.models import CustomUser, Hall, Movie, Showing
+from cinema.settings import CINEMA_EARLIEST_TIME, CINEMA_LATEST_TIME
 
 
 class CustomUserPasswordHashMixin:
@@ -44,4 +47,4 @@ class MovieSerializer(ModelSerializer):
 class ShowingSerializer(ModelSerializer):
     class Meta:
         model = Showing
-        fields = ['id', 'hall', 'movie', 'time', 'price']
+        fields = ['id', 'hall', 'movie', 'date_time', 'price']

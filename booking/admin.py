@@ -37,7 +37,7 @@ class MovieAdmin(ModelAdmin):
 
 
 class ShowingAdmin(ModelAdmin):
-    list_display = ('id', 'hall', 'movie', 'time', 'price')
+    list_display = ('id', 'hall', 'movie', 'date_time', 'price')
     readonly_fields = ('id', )
 
 
