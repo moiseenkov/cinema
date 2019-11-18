@@ -9,4 +9,6 @@ urlpatterns = [
     path('halls/<int:pk>', views.HallsDetail.as_view(), name='hall-list'),
     path('movies/', views.MoviesListView.as_view(), name='movie-list'),
     path('movies/<int:pk>', views.MoviesDetail.as_view(), name='movie-list'),
+    path('showings/', views.ShowingsListView.as_view(), name='showing-list'),
+    path('showings/<int:pk>', views.ShowingsDetail.as_view(), name='showing-detail'),
 ]

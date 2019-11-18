@@ -22,6 +22,7 @@ def api_root(request, format_=None):
         'token/refresh': reverse('token-refresh', request=request, format=format_),
         'halls': reverse('hall-list', request=request, format=format_),
         'movies': reverse('movie-list', request=request, format=format_),
+        'showings': reverse('showing-list', request=request, format=format_),
     })
 
 
@@ -146,4 +147,34 @@ class MoviesDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retriev
         'PUT': (IsAdminUser, ),
         'PATCH': (IsAdminUser,),
         'DELETE': (IsAdminUser,),
+    }
+
+
+class ShowingsListView(PermissionSelectorMixin, ListCreateAPIView):
+    """
+    Returns list of showings and allows admin to create new showing
+    """
+    serializer_class = serializers.ShowingSerializer
+    permission_classes = [AllowAny]
+    queryset = models.Showing.objects.all()
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_fields = ['hall', 'movie', 'time', 'price']
+
+    permission_classes_by_method = {
+        'POST': (IsAdminUser, ),
+    }
+
+
+class ShowingsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
+    """
+    Returns detailed information about showing. Admins allowed to create, update and delete it
+    """
+    serializer_class = serializers.ShowingSerializer
+    permission_classes = [AllowAny]
+    queryset = models.Showing.objects.all()
+
+    permission_classes_by_method = {
+        'PUT': (IsAdminUser, ),
+        'PATCH': (IsAdminUser, ),
+        'DELETE': (IsAdminUser, ),
     }

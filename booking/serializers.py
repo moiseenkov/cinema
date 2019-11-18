@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from booking.models import CustomUser, Hall, Movie
+from booking.models import CustomUser, Hall, Movie, Showing
 
 
 class CustomUserPasswordHashMixin:
@@ -39,3 +39,9 @@ class MovieSerializer(ModelSerializer):
     class Meta:
         model = Movie
         fields = ['id', 'name', 'duration', 'premiere_year']
+
+
+class ShowingSerializer(ModelSerializer):
+    class Meta:
+        model = Showing
+        fields = ['id', 'hall', 'movie', 'time', 'price']
