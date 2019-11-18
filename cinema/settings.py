@@ -149,3 +149,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# The earliest possible showing time
+CINEMA_EARLIEST_TIME = os.environ.get('CINEMA_EARLIEST_TIME') or '8:00'
+
+# The latest possible showing time
+CINEMA_LATEST_TIME = os.environ.get('CINEMA_LATEST_TIME') or '23:00'
+
+# Commercial period in minutes
+CINEMA_COMMERCIAL_PERIOD_MINUTES = os.environ.get('CINEMA_COMMERCIAL_PERIOD_MINUTES') or 10
+
+# Time in minutes required for cleaning hall after showing
+CINEMA_CLEANING_PERIOD_MINUTES = os.environ.get('CINEMA_CLEANING_PREIOD_MINUTES') or 15
