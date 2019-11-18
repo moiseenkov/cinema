@@ -23,16 +23,18 @@ def api_root(request, format_=None):
         'halls': reverse('hall-list', request=request, format=format_),
         'movies': reverse('movie-list', request=request, format=format_),
         'showings': reverse('showing-list', request=request, format=format_),
+        'tickets': reverse('ticket-list', request=request, format=format_),
     })
 
 
-class UsersFilterMixin:
+class FilterByUserMixin:
     """
-    Custom GenericAPIView
+    Filters queryset by pk. Admin gets queryset with no filtering. Attribute 'user_field' must be specified
     """
     def get_queryset(self):
         user = self.request.user
-        queryset = self.queryset if user.is_staff else self.queryset.filter(pk=user.pk)
+        filtering = {self.user_field: user.pk}
+        queryset = self.queryset if user.is_staff else self.queryset.filter(**filtering)
         return queryset.all()
 
 
@@ -54,7 +56,7 @@ class ProtectedErrorOnDeleteMixin:
             return Response(data=str(ex), status=status.HTTP_423_LOCKED)
 
 
-class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
+class CustomListByUser(FilterByUserMixin, ListCreateAPIView):
     """
     Returns list of available users and allows to create new user
     """
@@ -62,6 +64,7 @@ class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
     queryset = models.CustomUser.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_fields = ['email', 'is_staff', 'is_active']
+    user_field = 'pk'
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
@@ -70,12 +73,13 @@ class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
             return serializers.CustomUserSerializer
 
 
-class CustomUserDetail(UsersFilterMixin, RetrieveUpdateDestroyAPIView):
+class CustomUserDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     """
     Returns user's information and allows to update and delete it
     """
     permission_classes = [IsAuthenticated]
     queryset = models.CustomUser.objects.all()
+    user_field = ['pk']
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
