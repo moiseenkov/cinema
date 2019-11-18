@@ -57,8 +57,8 @@ class Movie(models.Model):
 
 
 class Showing(models.Model):
-    hall = models.ForeignKey(to=Hall, on_delete=models.CASCADE)
-    movie = models.ForeignKey(to=Movie, on_delete=models.CASCADE)
+    hall = models.ForeignKey(to=Hall, on_delete=models.PROTECT)
+    movie = models.ForeignKey(to=Movie, on_delete=models.PROTECT)
     time = models.DateTimeField()
     price = models.DecimalField(max_digits=32, decimal_places=2, validators=[MinValueValidator(0.0)])
 

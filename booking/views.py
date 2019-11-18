@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -42,6 +43,14 @@ class PermissionSelectorMixin:
         except KeyError:
             # method is not set return default permission_classes
             return [permission() for permission in self.permission_classes]
+
+
+class ProtectedErrorOnDeleteMixin:
+    def delete(self, request, *args, **kwargs):
+        try:
+            return super().delete(request, *args, **kwargs)
+        except ProtectedError as ex:
+            return Response(data=str(ex), status=status.HTTP_423_LOCKED)
 
 
 class CustomUsersList(UsersFilterMixin, ListCreateAPIView):
@@ -95,7 +104,7 @@ class HallsList(PermissionSelectorMixin, ListCreateAPIView):
     }
 
 
-class HallsDetail(PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
+class HallsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
     Returns detailed information about cinema hall. Admins allowed to create, update and delete it
     """
@@ -125,7 +134,7 @@ class MoviesListView(PermissionSelectorMixin, ListCreateAPIView):
     }
 
 
-class MoviesDetail(PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
+class MoviesDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
     Returns detailed information about cinema hall. Admins allowed to create, update and delete it
     """
