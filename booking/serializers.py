@@ -3,7 +3,7 @@ import datetime
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from booking.models import CustomUser, Hall, Movie, Showing
+from booking.models import CustomUser, Hall, Movie, Showing, Ticket
 from cinema.settings import CINEMA_EARLIEST_TIME, CINEMA_LATEST_TIME, CINEMA_CLEANING_PERIOD_MINUTES, \
     CINEMA_COMMERCIAL_PERIOD_MINUTES
 
@@ -73,3 +73,29 @@ class ShowingSerializer(ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+
+class TicketSerializer(ModelSerializer):
+    price = serializers.ReadOnlyField(source='showing.price')
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'showing', 'row_number', 'seat_number', 'paid', 'user', 'price', 'date_time']
+        read_only_fields = fields.copy()
+
+
+class TicketCreateSerializer(ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    date_time = serializers.HiddenField(default=serializers.CreateOnlyDefault(datetime.datetime.now()))
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'date_time']
+
+
+class TicketCreateAdminSerializer(ModelSerializer):
+    date_time = serializers.HiddenField(default=serializers.CreateOnlyDefault(datetime.datetime.now()))
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'date_time']

@@ -182,3 +182,34 @@ class ShowingsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retri
         'PATCH': (IsAdminUser, ),
         'DELETE': (IsAdminUser, ),
     }
+
+
+class TicketsListView(FilterByUserMixin, ListCreateAPIView):
+    """
+    Returns list of showings and allows admin to create new showing
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = models.Ticket.objects.all()
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_fields = ['user', 'showing', 'date_time', 'row_number', 'seat_number', 'paid']
+    user_field = 'user'
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            if self.request.user and self.request.user.is_staff:
+                return serializers.TicketCreateAdminSerializer
+            else:
+                return serializers.TicketCreateSerializer
+        else:
+            return serializers.TicketSerializer
+
+
+class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
+    """
+    Returns detailed information about tickets. Authenticated users allowed to create, update and delete their tickets.
+    Admin allowed to create, update and delete any ticket
+    """
+    serializer_class = serializers.TicketSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = models.Ticket.objects.all()
+    user_field = 'user'
