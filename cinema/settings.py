@@ -76,6 +76,9 @@ WSGI_APPLICATION = 'cinema.wsgi.application'
 
 AUTH_USER_MODEL = 'booking.CustomUser'
 
+USE_TZ = True
+TIME_ZONE = os.environ.get('TIME_ZONE') or 'Asia/Yekaterinburg'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

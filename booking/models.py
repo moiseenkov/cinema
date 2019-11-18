@@ -54,3 +54,19 @@ class Movie(models.Model):
 
     def __str__(self):
         return str(self.name) + str(self.premiere_year or '')
+
+
+class Showing(models.Model):
+    hall = models.ForeignKey(to=Hall, on_delete=models.CASCADE)
+    movie = models.ForeignKey(to=Movie, on_delete=models.CASCADE)
+    time = models.DateTimeField()
+    price = models.DecimalField(max_digits=32, decimal_places=2, validators=[MinValueValidator(0.0)])
+
+    class Meta:
+        verbose_name = 'Showing'
+        verbose_name_plural = 'Showings'
+        ordering = ['-time']
+        unique_together = ['hall', 'movie', 'time']
+
+    def __str__(self):
+        return str(self.movie) + ', ' + str(self.time) + ', ' + str(self.hall) + ', $' + str(self.price)
