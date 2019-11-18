@@ -41,8 +41,13 @@ class ShowingAdmin(ModelAdmin):
     readonly_fields = ('id', )
 
 
+class TicketAdmin(ModelAdmin):
+    list_display = ('id', 'user', 'showing', 'date_time', 'row_number', 'seat_number', 'paid')
+    readonly_fields = ('id', 'user', 'date_time')
+
+
 admin.site.register(models.CustomUser, CustomUserAdmin)
 admin.site.register(models.Hall, HallAdmin)
 admin.site.register(models.Movie, MovieAdmin)
 admin.site.register(models.Showing, ShowingAdmin)
-
+admin.site.register(models.Ticket, TicketAdmin)

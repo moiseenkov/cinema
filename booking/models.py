@@ -70,3 +70,21 @@ class Showing(models.Model):
 
     def __str__(self):
         return str(self.movie) + ', ' + str(self.date_time) + ', ' + str(self.hall) + ', $' + str(self.price)
+
+
+class Ticket(models.Model):
+    showing = models.ForeignKey(to=Showing, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=CustomUser, on_delete=models.PROTECT)
+    date_time = models.DateTimeField()
+    row_number = models.IntegerField(verbose_name='Row number', validators=[MinValueValidator(1)])
+    seat_number = models.IntegerField(verbose_name='Seat number in row', validators=[MinValueValidator(1)])
+    paid = models.BooleanField(verbose_name='Paid', default=False)
+
+    class Meta:
+        verbose_name = 'Ticket'
+        verbose_name_plural = 'Tickets'
+        ordering = ['-id']
+        unique_together = ['showing', 'row_number', 'seat_number']
+
+    def __str__(self):
+        return ', '.join((str(value) for value in ['Ticket for', self.showing, 'user', self.user, self.date_time]))
