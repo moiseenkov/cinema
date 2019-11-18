@@ -53,7 +53,7 @@ class Movie(models.Model):
         unique_together = ['name', 'premiere_year']
 
     def __str__(self):
-        return str(self.name) + str(self.premiere_year or '')
+        return str(self.name) + (" (" + str(self.premiere_year) + ")") or ''
 
 
 class Showing(models.Model):
