@@ -85,7 +85,9 @@ TIME_ZONE = os.environ.get('TIME_ZONE') or 'Asia/Yekaterinburg'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'tools.pagination.CustomPageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 SIMPLE_JWT = {
