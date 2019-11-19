@@ -99,3 +99,12 @@ class TicketCreateAdminSerializer(ModelSerializer):
     class Meta:
         model = Ticket
         fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'date_time']
+
+
+class PaymentSerializer(ModelSerializer):
+    price = serializers.ReadOnlyField(source='showing.price')
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'showing', 'row_number', 'seat_number', 'paid', 'user', 'price', 'date_time']
+        read_only_fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'price', 'date_time']

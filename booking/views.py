@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.decorators import api_view
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -24,6 +24,7 @@ def api_root(request, format_=None):
         'movies': reverse('movie-list', request=request, format=format_),
         'showings': reverse('showing-list', request=request, format=format_),
         'tickets': reverse('ticket-list', request=request, format=format_),
+        # 'pay/<int:pk>': reverse('pay', request=request, format=format_),
     })
 
 
@@ -213,3 +214,23 @@ class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
     user_field = 'user'
+
+
+class PayForTicket(FilterByUserMixin, UpdateAPIView):
+    """
+    Performs payment for a booked ticket
+    """
+    serializer_class = serializers.PaymentSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = models.Ticket.objects.all()
+    user_field = 'user'
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = {
+            'paid': True
+        }
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
