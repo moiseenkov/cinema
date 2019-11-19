@@ -80,7 +80,7 @@ class CustomUserDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     """
     permission_classes = [IsAuthenticated]
     queryset = models.CustomUser.objects.all()
-    user_field = ['pk']
+    user_field = 'pk'
 
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
