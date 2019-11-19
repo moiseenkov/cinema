@@ -17,6 +17,7 @@ class LoginTestCase(TestCase):
         self.url_login = reverse('token')
         self.client = Client()
         self.response = self.client.post(self.url_login, self.credentials)
+        self.token = self.response.data.get('access', None)
 
 
 class LoggedInUserTestCase(LoginTestCase):
