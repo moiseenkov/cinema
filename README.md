@@ -32,3 +32,8 @@ Create superuser (email required)
 ```
 docker-compose exec api python manage.py createsuperuser
 ```
+
+## Run tests
+```
+docker-compose exec api ./manage.py test
+```
