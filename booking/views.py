@@ -57,11 +57,11 @@ class ProtectedErrorOnDeleteMixin:
             return Response(data=str(ex), status=status.HTTP_423_LOCKED)
 
 
-class CustomListByUser(FilterByUserMixin, ListCreateAPIView):
+class CustomUserList(FilterByUserMixin, ListCreateAPIView):
     """
     Returns list of available users and allows to create new user
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     queryset = models.CustomUser.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_fields = ['email', 'is_staff', 'is_active']
@@ -70,6 +70,8 @@ class CustomListByUser(FilterByUserMixin, ListCreateAPIView):
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
             return serializers.CustomUserAdminSerializer
+        elif self.request.method == 'POST':
+            return serializers.CustomUserCreateSerializer
         else:
             return serializers.CustomUserSerializer
 
