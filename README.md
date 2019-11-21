@@ -35,5 +35,5 @@ docker-compose exec api python manage.py createsuperuser
 
 ## Run tests
 ```
-docker-compose exec api ./manage.py test
+docker-compose exec api python manage.py test -v 2
 ```
