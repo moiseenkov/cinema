@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from booking.models import CustomUser, Hall
+from booking.models import CustomUser, Hall, Movie
 
 
 def get_halls_dict():
@@ -22,6 +22,25 @@ def get_halls_dict():
         'rows_size': hall.rows_size,
         'seats_count': hall.rows_count * hall.rows_size,
     } for hall in Hall.objects.all()]
+
+
+def get_movies_dict():
+    """
+    Returns dictionary that contains information about all movies from database with following fields:
+    {
+        'id': ...,
+        'name': ...,
+        'duration': ...,
+        'premiere_year': ...,
+    }
+    :return: Dict that contains information about all movies from database
+    """
+    return [{
+        'id': movie.pk,
+        'name': movie.name,
+        'duration': movie.duration,
+        'premiere_year': movie.premiere_year,
+    } for movie in Movie.objects.all()]
 
 
 class LoginTestCase(TestCase):
