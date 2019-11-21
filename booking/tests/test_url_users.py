@@ -1,6 +1,6 @@
 import json
 
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -10,7 +10,6 @@ from booking.tests.helper import LoggedInUserTestCase
 
 class TestURLUsersNotAuthenticated(TestCase):
     def setUp(self) -> None:
-        self.client = Client()
         self.url_list = reverse('user-list')
         self.credentials = {
                 'email': 'user1@test.com',
