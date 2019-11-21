@@ -1,3 +1,5 @@
+from rest_framework import status
+
 from booking.tests.helper import LoggedInUserTestCase, LoggedInAdminTestCase
 
 
@@ -7,7 +9,7 @@ class TestTokenMixin:
     """
 
     def test_login_response_code(self):
-        self.assertEqual(self.response.status_code, 200)
+        self.assertEqual(self.response.status_code, status.HTTP_200_OK)
 
     def test_login_response_data(self):
         data = self.response.data
@@ -17,9 +19,10 @@ class TestTokenMixin:
 
     def test_login_without_credentials(self):
         response = self.client.post(self.url_login, {})
-        self.assertContains(response=response, status_code=400, text='This field is required', count=2)
-        self.assertContains(response=response, status_code=400, text='email')
-        self.assertContains(response=response, status_code=400, text='password')
+        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='This field is required',
+                            count=2)
+        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='email')
+        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='password')
 
     def test_login_incorrect_credentials(self):
         not_exist = {
@@ -27,18 +30,18 @@ class TestTokenMixin:
             'password': 'wrong password'
         }
         response = self.client.post(self.url_login, not_exist)
-        self.assertContains(response=response, status_code=401, text='No active account found with the given '
-                                                                     'credentials')
+        self.assertContains(response=response, status_code=status.HTTP_401_UNAUTHORIZED,
+                            text='No active account found with the given credentials')
 
     def test_login_wrong_methods(self):
         response = self.client.get(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         response = self.client.put(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         response = self.client.patch(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         response = self.client.delete(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class TestTokenUser(TestTokenMixin, LoggedInUserTestCase):
