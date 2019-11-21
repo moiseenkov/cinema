@@ -1,7 +1,27 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
 
-from booking.models import CustomUser
+from booking.models import CustomUser, Hall
+
+
+def get_halls_dict():
+    """
+    Returns dictionary that contains information about all halls from database with following fields:
+    {
+        'id': ...,
+        'rows_count': ...,
+        'rows_size': ...,
+        'seats_count': ...,  # This value calculates as a rows_count * rows_size
+    }
+    :return: Dict that contains information about all halls from database
+    """
+    return [{
+        'id': hall.pk,
+        'name': hall.name,
+        'rows_count': hall.rows_count,
+        'rows_size': hall.rows_size,
+        'seats_count': hall.rows_count * hall.rows_size,
+    } for hall in Hall.objects.all()]
 
 
 class LoginTestCase(TestCase):
@@ -13,9 +33,9 @@ class LoginTestCase(TestCase):
             'password': 'user'
         }
     """
+
     def setUp(self) -> None:
         self.url_login = reverse('token')
-        self.client = Client()
         self.response = self.client.post(self.url_login, self.credentials)
         self.token = self.response.data.get('access', None)
 
@@ -24,6 +44,7 @@ class LoggedInUserTestCase(LoginTestCase):
     """
     Test case provides ready logged in user (CustomUser instance)
     """
+
     def setUp(self) -> None:
         self.credentials = {
             'email': 'user@test.com',
@@ -37,8 +58,9 @@ class LoggedInUserTestCase(LoginTestCase):
 
 class LoggedInAdminTestCase(LoginTestCase):
     """
-        Test case provides ready logged in admin (CustomUser instance)
-        """
+    Test case provides ready logged in admin (CustomUser instance)
+    """
+
     def setUp(self) -> None:
         self.credentials = {
             'email': 'admin@test.com',
