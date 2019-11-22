@@ -1,91 +1,44 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from booking.models import CustomUser, Hall, Movie
+from booking.models import CustomUser
 
 
-def get_halls_dict():
-    """
-    Returns dictionary that contains information about all halls from database with following fields:
-    {
-        'id': ...,
-        'rows_count': ...,
-        'rows_size': ...,
-        'seats_count': ...,  # This value calculates as a rows_count * rows_size
-    }
-    :return: Dict that contains information about all halls from database
-    """
-    return [{
-        'id': hall.pk,
-        'name': hall.name,
-        'rows_count': hall.rows_count,
-        'rows_size': hall.rows_size,
-        'seats_count': hall.rows_count * hall.rows_size,
-    } for hall in Hall.objects.all()]
+class UserForTesting:
+    def __init__(self, **kwargs):
+        self.credentials = kwargs
+        if kwargs.get('is_staff', None):
+            self.user = CustomUser.objects.create_user(**kwargs)
+        else:
+            self.user = CustomUser.objects.create_superuser(**kwargs)
+        self.user.save()
 
 
-def get_movies_dict():
-    """
-    Returns dictionary that contains information about all movies from database with following fields:
-    {
-        'id': ...,
-        'name': ...,
-        'duration': ...,
-        'premiere_year': ...,
-    }
-    :return: Dict that contains information about all movies from database
-    """
-    return [{
-        'id': movie.pk,
-        'name': movie.name,
-        'duration': movie.duration,
-        'premiere_year': movie.premiere_year,
-    } for movie in Movie.objects.all()]
-
-
-class LoginTestCase(TestCase):
-    """
-    Base class for TestCases that require user authentication.
-    Attribute 'self.credentials' need to be specified in every derived class:
-    self.credentials = {
-            'email': 'user@test.com',
-            'password': 'user'
+class LoggedInTestCase(TestCase):
+    def _get_token(self, user):
+        data = {
+            'email': user.email,
+            'password': user.password
         }
-    """
+        response = self.client.put(path=reverse('token'), data=data)
+        return response.data.get('access', None)
 
     def setUp(self) -> None:
-        self.url_login = reverse('token')
-        self.response = self.client.post(self.url_login, self.credentials)
-        self.token = self.response.data.get('access', None)
-
-
-class LoggedInUserTestCase(LoginTestCase):
-    """
-    Test case provides ready logged in user (CustomUser instance)
-    """
-
-    def setUp(self) -> None:
-        self.credentials = {
+        user_credentials = {
             'email': 'user@test.com',
-            'password': 'user'
+            'password': 'user_password',
         }
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-        self.user = user
-        super(LoggedInUserTestCase, self).setUp()
-
-
-class LoggedInAdminTestCase(LoginTestCase):
-    """
-    Test case provides ready logged in admin (CustomUser instance)
-    """
-
-    def setUp(self) -> None:
-        self.credentials = {
+        admin_credentials = {
             'email': 'admin@test.com',
-            'password': 'admin'
+            'password': 'admin_password',
+            'is_staff': True
         }
-        admin = CustomUser.objects.create_superuser(**self.credentials)
-        admin.save()
-        self.admin = admin
-        super(LoggedInAdminTestCase, self).setUp()
+        self.user = UserForTesting(**user_credentials).user
+        self.admin = UserForTesting(**admin_credentials).user
+        self.user_token = self._get_token(self.user)
+        self.admin_token = self._get_token(self.admin)
+        self.credentials = [
+            user_credentials,
+            admin_credentials,
+        ]
+        super(LoggedInTestCase, self).setUp()
