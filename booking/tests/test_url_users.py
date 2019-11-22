@@ -195,3 +195,48 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         }
         self.assertDictEqual(response.data, expected_response)
 
+
+class UsersDetailURLNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.second_user = CustomUser.objects.create_user(email='second@test.com', password='password')
+        self.second_user.save()
+        super(UsersDetailURLNegativeTestCase, self).setUp()
+
+    def test_url_users_detail_negative_GET_unauthorized(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.get(path=url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_users_detail_negative_GET_another_user(self):
+        url = reverse('user-detail', args=[self.second_user.pk])
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_url_users_detail_negative_PUT_wrong_email_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        input_data = {
+            'email': self.second_user.email,
+            'password': 'new password'
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_detail_negative_PUT_wrong_email_admin(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        input_data = {
+            'email': self.second_user.email,
+            'password': 'new password'
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_detail_negative_PUT_not_all_fields(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        data = {
+            'email': 'changed_email@test.com'
+        }
+        response = self.client.put(path=url, data=data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
