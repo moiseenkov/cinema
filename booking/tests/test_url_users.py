@@ -248,6 +248,8 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         self.another_user_credentials = {
             'email': 'another_email@test.com',
             'password': 'password',
+            'is_staff': False,
+            'is_active': True,
         }
         super(UsersListURLPositiveTestCase, self).setUp()
 
