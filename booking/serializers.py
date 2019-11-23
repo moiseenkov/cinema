@@ -15,6 +15,12 @@ class CustomUserPasswordHashMixin:
         user.save()
         return user
 
+    def update(self, instance, validated_data):
+        if validated_data.get('password'):
+            instance.set_password(validated_data['password'])
+            validated_data['password'] = instance.password
+        return super().update(instance, validated_data)
+
 
 class CustomUserSerializer(CustomUserPasswordHashMixin, ModelSerializer):
     class Meta:
