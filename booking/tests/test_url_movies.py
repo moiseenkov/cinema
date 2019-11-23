@@ -1,238 +1,338 @@
-from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
 from booking.models import Movie
-from booking.tests import helper
-from booking.tests.helper import LoggedInUserTestCase, LoggedInAdminTestCase
+
+from booking.tests.helper import LoggedInTestCase
 
 
-class TestURLMovies(TestCase):
-    def setUp(self) -> None:
-        self.url_list = reverse('movie-list')
-        self.movies_data = [
-            {
-                'name': 'Movie 1',
-                'duration': 128
-            },
-            {
-                'name': 'Movie 2',
-                'duration': 256,
-                'premiere_year': 2019
-            }
-        ]
-        movies = [Movie(**info) for info in self.movies_data]
-        Movie.objects.bulk_create(movies)
-        self.movies = helper.get_movies_dict()
-
-    def test_url_movies_get_list(self):
-        response = self.client.get(path=self.url_list, data={})
+class MoviesDetailPositiveTestCase(LoggedInTestCase):
+    def test_url_movies_detail_positive_GET(self):
+        movie = Movie(name='Test movie', duration=120, premiere_year=2019)
+        movie.save()
+        expected_response = {
+            'id': movie.pk,
+            'name': movie.name,
+            'duration': movie.duration,
+            'premiere_year': movie.premiere_year,
+        }
+        response = self.client.get(path=reverse('movie-detail', args=[movie.pk]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('results', None))
-        self.assertEqual(len(response.data['results']), len(self.movies))
-        for expected in self.movies:
-            with self.subTest(expected=expected):
-                movies_found = [movie_ for movie_ in response.data['results'] if movie_['id'] == expected['id']]
-                self.assertEqual(len(movies_found), 1)
-                self.assertSetEqual(set(expected.items()), set(movies_found[0].items()))
+        self.assertDictEqual(response.data, expected_response)
 
-    def test_url_movies_get_detail(self):
-        for movie in self.movies:
-            with self.subTest(movie=movie):
-                response = self.client.get(path=reverse('movie-detail', args=[movie['id']]), data={})
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertIsInstance(response.data, dict)
-                self.assertDictEqual(response.data, movie)
-
-    def test_url_movies_post(self):
-        data = {
-            'name': 'New name'
+    def test_url_movies_detail_positive_PUT_admin(self):
+        input_data = {
+            'name': 'Test name',
+            'duration': 120,
+            'premiere_year': 1999,
         }
-        response = self.client.post(path=self.url_list, data=data)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_url_movies_put_patch_delete(self):
-        movie = self.movies[0]
-        url = reverse('movie-detail', args=[movie['id']])
-        data = {
-            'name': 'Changed name by unauthorised user'
+        movie = Movie(name='Name', duration=100)
+        movie.save()
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_response = {
+            'id': movie.pk,
+            'name': input_data['name'],
+            'duration': input_data['duration'],
+            'premiere_year': input_data['premiere_year'],
         }
-
-        with self.subTest():
-            response = self.client.put(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        with self.subTest():
-            response = self.client.patch(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        with self.subTest():
-            response = self.client.delete(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-class TestURLMoviesUser(LoggedInUserTestCase):
-    def setUp(self) -> None:
-        self.url_list = reverse('movie-list')
-        self.movies_data = [
-            {
-                'name': 'Movie 1',
-                'duration': 128
-            },
-            {
-                'name': 'Movie 2',
-                'duration': 256,
-                'premiere_year': 2019
-            }
-        ]
-        movies = [Movie(**info) for info in self.movies_data]
-        Movie.objects.bulk_create(movies)
-        self.movies = helper.get_movies_dict()
-        super(TestURLMoviesUser, self).setUp()
-
-    def test_url_movies_get_list(self):
-        response = self.client.get(path=reverse('movie-list'), data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('results', None))
-        self.assertEqual(len(response.data['results']), len(self.movies))
-        for expected in self.movies:
-            with self.subTest(expected=expected):
-                movies_found = [movie_ for movie_ in response.data['results'] if movie_['id'] == expected['id']]
-                self.assertEqual(len(movies_found), 1)
-                self.assertSetEqual(set(expected.items()), set(movies_found[0].items()))
+        self.assertDictEqual(response.data, expected_response)
 
-    def test_url_movies_get_detail(self):
-        for movie in self.movies:
-            with self.subTest(movie=movie):
-                response = self.client.get(path=reverse('movie-detail', args=[movie['id']]), data={},
-                                           HTTP_AUTHORIZATION=f'Bearer {self.token}')
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertIsInstance(response.data, dict)
-                self.assertDictEqual(response.data, movie)
-
-    def test_url_movies_post(self):
-        data = {
-            'name': 'New name'
+    def test_url_movies_detail_positive_PATCH_admin(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        input_data = {
+            'name': 'New name',
         }
-        response = self.client.post(path=reverse('movie-list'), data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        movie.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(movie.name, input_data['name'])
+        self.assertEqual(response.data['name'], input_data['name'])
+
+    def test_url_movies_detail_positive_DELETE_admin(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        pk = movie.pk
+        response = self.client.delete(path=reverse('movie-detail', args=[pk]),
+                                      HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        movies = Movie.objects.filter(pk=pk)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(movies.count(), 0)
+
+
+class MoviesDetailNegativeTestCase(LoggedInTestCase):
+    def test_url_movies_detail_negative_GET_unknown(self):
+        movies = [Movie(name='Name', duration=120, premiere_year=year) for year in [2000, 2001, 2002]]
+        Movie.objects.bulk_create(movies)
+        ids = [movie.pk for movie in Movie.objects.all()]
+        pk = 0
+        while pk in ids:
+            pk += 1
+
+        response = self.client.get(path=reverse('movie-detail', args=[pk]))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_url_movies_detail_negative_PUT_user(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        input_data = {
+            'name': 'Test name',
+            'duration': 16,
+            'premiere_year': 2005,
+        }
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_movies_put_patch_delete(self):
-        movie = self.movies[0]
-        url = reverse('movie-detail', args=[movie['id']])
-        data = {
-            'name': 'Changed name by unauthorised user'
+    def test_url_movies_detail_negative_PUT_unauthorized(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        input_data = {
+            'name': 'Test name',
+            'duration': 16,
+            'premiere_year': 2005,
         }
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_movies_detail_negative_PATCH_user(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        input_data = {
+            'name': 'New name',
+        }
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        movie.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_url_movies_detail_negative_PATCH_unauthorized(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
+        input_data = {
+            'name': 'New name',
+        }
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                     content_type='application/json')
+        movie.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_movies_detail_negative_PATCH_incorrect_input(self):
+        movie = Movie(name='Name', duration=120, premiere_year=1999)
+        movie.save()
 
         with self.subTest():
-            response = self.client.put(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            input_data = {
+                'name': '',
+                'duration': 120,
+                'premiere_year': 2000,
+            }
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         with self.subTest():
-            response = self.client.patch(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            input_data = {
+                'name': 'Name for movie',
+                'duration': 0,
+                'premiere_year': 2000,
+            }
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         with self.subTest():
-            response = self.client.delete(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            input_data = {
+                'name': 'Name for movie',
+                'duration': 20,
+                'premiere_year': 1700,
+            }
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_movies_detail_negative_DELETE_user(self):
+        movie_data = {
+            'name': 'Name for movie',
+            'duration': 20,
+            'premiere_year': 2000,
+        }
+        movie = Movie(**movie_data)
+        movie.save()
+        pk = movie.pk
+        response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]),
+                                      HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+
+        movies = Movie.objects.filter(pk=pk)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(movies.count(), 1)
+        movie = movies[0]
+        self.assertEqual(movie.pk, pk)
+        self.assertEqual(movie.name, movie_data['name'])
+        self.assertEqual(movie.duration, movie_data['duration'])
+        self.assertEqual(movie.premiere_year, movie_data['premiere_year'])
+
+    def test_url_movies_detail_negative_DELETE_unauthorized(self):
+        movie_data = {
+            'name': 'Name for movie',
+            'duration': 20,
+            'premiere_year': 2000,
+        }
+        movie = Movie(**movie_data)
+        movie.save()
+        pk = movie.pk
+        response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]))
+
+        movies = Movie.objects.filter(pk=pk)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(movies.count(), 1)
+        movie = movies[0]
+        self.assertEqual(movie.pk, pk)
+        self.assertEqual(movie.name, movie_data['name'])
+        self.assertEqual(movie.duration, movie_data['duration'])
+        self.assertEqual(movie.premiere_year, movie_data['premiere_year'])
 
 
-class TestURLMoviesAdmin(LoggedInAdminTestCase):
+class MoviesListPositiveTestCase(LoggedInTestCase):
     def setUp(self) -> None:
-        super(TestURLMoviesAdmin, self).setUp()
-        self.new_movie_name = 'Test movie'
-        self.new_movie_data = {
-            'name': self.new_movie_name,
-            'duration': 15,
-            'premiere_year': 2017
-        }
+        self.url_list = reverse('movie-list')
+        super(MoviesListPositiveTestCase, self).setUp()
 
-    def test_url_movies_put(self):
-        movie = Movie(**self.new_movie_data)
-        movie.save()
-        self.assertIsNotNone(movie)
+    def test_url_movie_list_positive_GET(self):
+        sub_test_parameters = [
+            {
+                # Unauthorized user
+                'path': self.url_list,
+            },
+            {
+                # Authorized user
+                'path': self.url_list,
+                'HTTP_AUTHORIZATION': f'Bearer {self.user_token}',
+            },
+            {
+                # Admin
+                'path': self.url_list,
+                'HTTP_AUTHORIZATION': f'Bearer {self.admin_token}',
+            },
+        ]
+        movies = [Movie(name="Name", duration=120, premiere_year=year) for year in [2000, 2001, 2002]]
+        Movie.objects.bulk_create(movies)
+        expected_response = [
+            {
+                'id': movie.pk,
+                'name': movie.name,
+                'duration': movie.duration,
+                'premiere_year': movie.premiere_year,
+            } for movie in Movie.objects.all().order_by('-pk')
+        ]
+        for request_parameter_set in sub_test_parameters:
+            with self.subTest(request_parameter_Set=request_parameter_set):
+                response = self.client.get(**request_parameter_set)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIsNotNone(response.data.get('results', None))
+                for received, expected in zip(response.data['results'], expected_response):
+                    self.assertDictEqual(dict(received), expected)
 
+    def test_url_movie_list_positive_POST_admin(self):
         data = {
-            'name': 'Changed name'
+            'name': 'Name',
+            'duration': 20,
+            'premiere_year': 2000,
         }
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(path=self.url_list, data=data, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        movies = Movie.objects.filter(name=data['name'])
 
-        data['duration'] = -10
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        data['name'] = 'Another new name'
-        data['duration'] = 200
-        data['premiere_year'] = 2018
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data['id'] = movie.pk
-        self.assertDictEqual(response.data, data)
-
-    def test_url_movies_post(self):
-        response = self.client.post(path=reverse('movie-list'), data=self.new_movie_data,
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        self.assertEqual(movies.count(), 1)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        new_movie = Movie.objects.filter(name=self.new_movie_name).first()
-        self.assertIsNotNone(new_movie)
+        movie = movies[0]
+        expected_response = data.copy()
+        expected_response['id'] = movie.pk
+        self.assertDictEqual(response.data, expected_response)
 
-        expected_data = self.new_movie_data.copy()
-        expected_data['id'] = new_movie.pk
-        self.assertDictEqual(response.data, expected_data)
 
-    def test_url_movies_post_empty(self):
-        response = self.client.post(path=reverse('movie-list'), data={},
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+class MoviesListNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('movie-list')
+        super(MoviesListNegativeTestCase, self).setUp()
 
-    def test_url_movies_post_already_exist(self):
-        movie = Movie(**self.new_movie_data)
-        movie.save()
-        response = self.client.post(path=reverse('movie-list'), data=self.new_movie_data,
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_url_movies_patch(self):
-        movie = Movie(**self.new_movie_data)
-        movie.save()
-
-        changed_name = 'Changed name'
+    def test_url_movie_list_negative_POST_unauthorized(self):
         data = {
-            'name': changed_name
+            'name': 'Name',
+            'duration': 20,
+            'premiere_year': 2000,
         }
-        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('name', None))
-        self.assertEqual(response.data['name'], changed_name)
+        response = self.client.post(path=self.url_list)
+        movies = Movie.objects.filter(name=data['name'])
 
-    def test_url_movies_patch_already_exist(self):
-        movie1 = Movie(**self.new_movie_data)
-        movie1.save()
-        movie2 = Movie(name='Second movie',
-                       duration=self.new_movie_data['duration'],
-                       premiere_year=self.new_movie_data['premiere_year'])
-        movie2.save()
+        self.assertEqual(movies.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_movie_list_negative_POST_user(self):
         data = {
-            'name': movie2.name
+            'name': 'Name',
+            'duration': 20,
+            'premiere_year': 2000,
         }
-        response = self.client.patch(path=reverse('movie-detail', args=[movie1.pk]), data=data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        movies = Movie.objects.filter(name=data['name'])
 
-    def test_url_movies_delete(self):
-        movie = Movie(**self.new_movie_data)
-        movie.save()
-        self.assertIsNotNone(movie)
+        self.assertEqual(movies.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]),
-                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+    def test_url_movie_list_negative_POST_incorrect_input(self):
+        cases = [
+            {
+                'name': 'Name',
+                'duration': 20,
+            },
+            {
+                'name': 'Name',
+                'premiere_year': 2000,
+            },
+            {
+                'duration': 20,
+                'premiere_year': 2000,
+            },
+            {
+                'name': '',
+                'duration': '',
+                'premiere_year': '',
+            },
+            {
+                'name': 'Name',
+                'duration': -12,
+                'premiere_year': 1999,
+            },
+            {
+                'name': 'Name',
+                'duration': 102,
+                'premiere_year': 1700,
+            },
+            {
+                'name': 'Name',
+                'duration': '102',
+                'premiere_year': 'two thousand',
+            },
+        ]
+        movies_control = list(Movie.objects.all().order_by('-pk'))
+        for case in cases:
+            with self.subTest(case=case):
+                response = self.client.post(path=self.url_list, data=case,
+                                            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+                movies = list(Movie.objects.all().order_by('-pk'))
 
-        response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]),
-                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(len(movies_control), len(movies))
+                for received, expected in zip(movies_control, movies):
+                    self.assertEqual(received.pk, expected.pk)
+                    self.assertEqual(received.name, expected.name)
+                    self.assertEqual(received.rows_count, expected.rows_count)
+                    self.assertEqual(received.rows_size, expected.rows_size)

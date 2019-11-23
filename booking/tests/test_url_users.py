@@ -1,235 +1,365 @@
-import json
-
-from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
 from booking.models import CustomUser
-from booking.tests.helper import LoggedInUserTestCase
+from booking.tests.helper import LoggedInTestCase
 
 
-class TestURLUsersNotAuthenticated(TestCase):
-    def setUp(self) -> None:
-        self.url_list = reverse('user-list')
-        self.credentials = {
-                'email': 'user1@test.com',
-                'password': 'password1'
-            }
-
-    def examine_response_is_ok(self, response):
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('results', None))
-
-    def test_users_list_get_empty(self):
-        response = self.client.get(path=self.url_list, data={})
-        self.examine_response_is_ok(response)
-        self.assertEqual(response.data['results'], [])
-
-    def test_users_list_get_not_empty(self):
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-
-        response = self.client.get(path=self.url_list, data={})
-        self.examine_response_is_ok(response)
-        self.assertEqual(response.data['results'], [])
-
-    def test_user_detail_get(self):
-        detail_url = reverse('user-detail', args=[1])
-        response = self.client.get(detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-
-        response = self.client.get(path=reverse('user-detail', args=[user.pk]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_user_detail_post(self):
-        response = self.client.post(path=self.url_list, data=self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertSetEqual(set(response.data.keys()), {'id', 'email', 'password'})
-        self.assertEqual(response.data['email'], self.credentials['email'])
-
-    def test_user_detail_put(self):
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-
-        response = self.client.put(path=reverse('user-detail', args=[user.pk]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self.client.put(path=reverse('user-detail', args=[1000]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_user_detail_patch(self):
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-
-        response = self.client.put(path=reverse('user-detail', args=[user.pk]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self.client.put(path=reverse('user-detail', args=[1000]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_user_detail_delete(self):
-        user = CustomUser.objects.create_user(**self.credentials)
-        user.save()
-
-        response = self.client.delete(path=reverse('user-detail', args=[user.pk]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self.client.delete(path=reverse('user-detail', args=[1000]), data={})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-class TestURLUsersList(LoggedInUserTestCase):
-    """
-    Test case covers user's list usage for authenticated non staff users
-    """
-
-    def setUp(self) -> None:
-        super(TestURLUsersList, self).setUp()
-        self.user_list = reverse('user-list')
-        self.new_user_credentials = {
-            'email': 'new_user@test.com',
-            'password': 'test'
-        }
-
-    def test_users_list_GET(self):
-        response = self.client.get(path=self.user_list, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        expected_response = {
-            "links": {
-                "next": None,
-                "previous": None
-            },
-            "count": 1,
-            "total_pages": 1,
-            "page_size": 10,
-            "results": [
-                {
-                    "id": self.user.pk,
-                    "email": self.user.email
-                }
-            ]
-        }
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.data, expected_response)
-
-        # User creates another user but he must not see him, thus list recall shouldn't change response body
-        self.client.post(path=self.user_list, data=self.new_user_credentials,
-                         HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        response = self.client.get(path=self.user_list, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.data, expected_response)
-
-    def test_users_list_POST(self):
-        # create new user
-        response = self.client.post(path=self.user_list, data=self.new_user_credentials,
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data.get('email', None), self.new_user_credentials['email'])
-        new_user_id = response.data.get('id', None)
-
-        # login as a new user
-        response = self.client.post(path=reverse('token'), data=self.new_user_credentials)
-        token = response.data.get('access', None)
-
-        # check users list for new user
-        expected_response = {
-            "links": {
-                "next": None,
-                "previous": None
-            },
-            "count": 1,
-            "total_pages": 1,
-            "page_size": 10,
-            "results": [
-                {
-                    "id": new_user_id,
-                    "email": self.new_user_credentials['email']
-                }
-            ]
-        }
-        response = self.client.get(path=self.user_list, data={}, HTTP_AUTHORIZATION=f'Bearer {token}')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.data, expected_response)
-
-
-class TestURLUserDetail(LoggedInUserTestCase):
-    def setUp(self) -> None:
-        super(TestURLUserDetail, self).setUp()
-        self.user_detail = reverse('user-detail', args=[self.user.pk])
-
-    def test_user_detail_get(self):
-        response = self.client.get(path=self.user_detail, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        expected_response = {
+class UsersDetailURLPositiveTestCase(LoggedInTestCase):
+    def test_url_users_detail_positive_GET_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        expected_data = {
             'id': self.user.pk,
             'email': self.user.email
         }
-        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_GET_admin_self(self):
+        url = reverse('user-detail', args=[self.admin.pk])
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_data = {
+            'id': self.admin.pk,
+            'email': self.admin.email,
+            'is_staff': True,
+            'is_active': True,
+            'password': self.admin.password,
+        }
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_GET_admin_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_data = {
+            'id': self.user.pk,
+            'email': self.user.email,
+            'is_staff': False,
+            'is_active': True,
+            'password': self.user.password,
+        }
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_PUT_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        another_email = 'another_email@test.com'
+        another_password = 'another password'
+        input_data = {
+            'email': another_email,
+            'password': another_password,
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data.get('email', None))
+        self.assertEqual(response.data['email'], another_email)
+
+        user = CustomUser.objects.get(pk=self.user.pk)
+        self.assertEqual(user.email, another_email)
+        self.assertTrue(user.check_password(another_password))
+
+    def test_url_users_detail_positive_PUT_admin_self(self):
+        url = reverse('user-detail', args=[self.admin.pk])
+        another_email = 'another_email@test.com'
+        another_password = 'another password'
+        input_data = {
+            'email': another_email,
+            'is_staff': True,
+            'is_active': True,
+            'password': another_password
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        admin = CustomUser.objects.get(pk=self.admin.pk)
+        expected_data = {
+            'id': self.admin.pk,
+            'email': another_email,
+            'is_staff': True,
+            'is_active': True,
+            'password': admin.password  # password should be hashed thus
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+        self.assertTrue(admin.check_password(another_password))
+
+    def test_url_users_detail_positive_PUT_admin_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        another_email = 'another_email@test.com'
+        another_password = 'another password'
+        input_data = {
+            'email': another_email,
+            'is_staff': False,
+            'is_active': True,
+            'password': another_password
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        user = CustomUser.objects.get(pk=self.user.pk)
+        expected_data = {
+            'id': self.user.pk,
+            'email': another_email,
+            'is_staff': False,
+            'is_active': True,
+            'password': user.password  # password should be hashed thus
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+        self.assertTrue(user.check_password(another_password))
+
+    def test_url_users_detail_positive_PATCH_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        another_email = 'another_email@test.com'
+        input_data = {
+            'email': another_email,
+        }
+        response = self.client.patch(path=url, data=input_data, content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        expected_data = {
+            'id': self.user.pk,
+            'email': another_email,
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_PATCH_admin_self(self):
+        url = reverse('user-detail', args=[self.admin.pk])
+        another_email = 'another_email@test.com'
+        input_data = {
+            'email': another_email,
+        }
+        response = self.client.patch(path=url, data=input_data, content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_data = {
+            'id': self.admin.pk,
+            'email': another_email,
+            'is_staff': True,
+            'is_active': True,
+            'password': self.admin.password
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_PATCH_admin_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        another_email = 'another_email@test.com'
+        input_data = {
+            'email': another_email,
+        }
+        response = self.client.patch(path=url, data=input_data, content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_data = {
+            'id': self.user.pk,
+            'email': another_email,
+            'is_staff': False,
+            'is_active': True,
+            'password': self.user.password
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+
+    def test_url_users_detail_positive_DELETE_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertContains(response=response, text='User is inactive', status_code=status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_users_detail_positive_DELETE_admin_self(self):
+        url = reverse('user-detail', args=[self.admin.pk])
+        response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertContains(response=response, text='User is inactive', status_code=status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_users_detail_positive_DELETE_admin_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected_response = {
+            'id': self.user.pk,
+            'email': self.user.email,
+            'is_active': False,
+            'is_staff': False,
+            'password': self.user.password,
+        }
         self.assertDictEqual(response.data, expected_response)
 
-        self.user.is_active = False
-        self.user.save()
-        response = self.client.get(path=self.user_detail, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 401)
 
-    def test_user_detail_get_wrong_id(self):
-        url = reverse('user-detail', args=[10001])
-        response = self.client.get(path=url, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertContains(response=response, text='Not found', status_code=404)
+class UsersDetailURLNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.second_user = CustomUser.objects.create_user(email='second@test.com', password='password')
+        self.second_user.save()
+        super(UsersDetailURLNegativeTestCase, self).setUp()
 
-    def test_user_detail_put_patch(self):
+    def test_url_users_detail_negative_GET_unauthorized(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        response = self.client.get(path=url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_users_detail_negative_GET_another_user(self):
+        url = reverse('user-detail', args=[self.second_user.pk])
+        response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_url_users_detail_negative_PUT_wrong_email_user(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        input_data = {
+            'email': self.second_user.email,
+            'password': 'new password'
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_detail_negative_PUT_wrong_email_admin(self):
+        url = reverse('user-detail', args=[self.user.pk])
+        input_data = {
+            'email': self.second_user.email,
+            'password': 'new password'
+        }
+        response = self.client.put(path=url, data=input_data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_detail_negative_PUT_not_all_fields(self):
+        url = reverse('user-detail', args=[self.user.pk])
         data = {
             'email': 'changed_email@test.com'
         }
-        expected_response = {
-            'id': self.user.pk,
-            'email': data['email']
+        response = self.client.put(path=url, data=data, content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class UsersListURLPositiveTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('user-list')
+        self.another_user_credentials = {
+            'email': 'another_email@test.com',
+            'password': 'password',
         }
-        response = self.client.put(path=self.user_detail, data=json.dumps(data), content_type='application/json',
-                                   HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 200)
+        super(UsersListURLPositiveTestCase, self).setUp()
+
+    def test_url_users_list_positive_GET_user(self):
+        response = self.client.get(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        expected_result = {
+            'id': self.user.pk,
+            'email': self.user.email,
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data.get('results', None))
+        data = response.data['results']
+        self.assertEqual(len(data), 1)
+        self.assertDictEqual(dict(data[0]), expected_result)
+
+    def test_url_users_list_positive_GET_admin(self):
+        response = self.client.get(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_result = [
+            {
+                'id': self.user.pk,
+                'email': self.user.email,
+                'is_active': True,
+                'is_staff': False,
+                'password': self.user.password,
+            },
+            {
+                'id': self.admin.pk,
+                'email': self.admin.email,
+                'is_active': True,
+                'is_staff': True,
+                'password': self.admin.password,
+            },
+        ]
+        expected_result.sort(key=lambda user: user['id'], reverse=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data.get('results', None))
+        data = response.data['results']
+        self.assertEqual(len(data), 2)
+        for given_user, expected_user in zip(data, expected_result):
+            with self.subTest(given_user=given_user, expected_user=expected_user):
+                self.assertDictEqual(given_user, expected_user)
+
+    def test_url_users_list_positive_POST_unauthorized(self):
+        email = self.another_user_credentials['email']
+        password = self.another_user_credentials['password']
+        response = self.client.post(path=self.url_list, data=self.another_user_credentials)
+
+        user = CustomUser.objects.filter(email=email).first()
+        self.assertIsNotNone(user)
+        self.assertEqual(user.email, email)
+        self.assertNotEqual(user.password, password)  # password should be hashed
+        self.assertTrue(user.check_password(password))
+        expected_response = {
+            'id': user.pk,
+            'email': user.email,
+            'password': user.password,
+        }
         self.assertDictEqual(response.data, expected_response)
 
-        response = self.client.patch(path=self.user_detail, data=json.dumps(data), content_type='application/json',
-                                     HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.data, expected_response)
+    def test_url_users_list_positive_POST_admin(self):
+        email = self.another_user_credentials['email']
+        password = self.another_user_credentials['password']
+        response = self.client.post(path=self.url_list, data=self.another_user_credentials,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
 
-    def test_user_detail_put_patch_empty(self):
-        response = self.client.put(path=self.user_detail, data={}, content_type='application/json',
-                                   HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertContains(response=response, text='This field is required', status_code=400)
-        self.assertContains(response=response, text='email', status_code=400)
+        new_user = CustomUser.objects.filter(email=email).first()
+        self.assertIsNotNone(new_user)
+        self.assertEqual(new_user.email, email)
+        self.assertNotEqual(new_user.password, password)  # password should be hashed
+        self.assertTrue(new_user.check_password(password))
 
         expected_response = {
-            'id': self.user.pk,
-            'email': self.user.email
+            'id': new_user.pk,
+            'email': new_user.email,
+            'password': new_user.password,
+            'is_staff': False,
+            'is_active': True,
         }
-        response = self.client.patch(path=self.user_detail, data={}, content_type='application/json',
-                                     HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_user_detail_put_patch_invalid_email(self):
-        emails = ['second_user@test.com', 'incorrect email']
-        user = CustomUser.objects.create_user(email=emails[0], password='password')
-        user.save()
-        for email in emails:
-            with self.subTest(email=email):
-                data = {
-                    'email': email
-                }
-                response = self.client.put(path=self.user_detail, data=json.dumps(data),
-                                           content_type='application/json',
-                                           HTTP_AUTHORIZATION=f'Bearer {self.token}')
-                self.assertEqual(response.status_code, 400)
 
-                response = self.client.patch(path=self.user_detail, data=json.dumps(data),
-                                             content_type='application/json',
-                                             HTTP_AUTHORIZATION=f'Bearer {self.token}')
-                self.assertEqual(response.status_code, 400)
+class UsersListURLNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('user-list')
+        super(UsersListURLNegativeTestCase, self).setUp()
 
-    def test_user_detail_delete(self):
-        response = self.client.delete(path=self.user_detail, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 204)
+    def test_url_users_list_negative_GET_unauthorized(self):
+        response = self.client.get(path=self.url_list)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data.get('results', None))
+        self.assertEqual(response.data['results'], [])
 
-        response = self.client.get(path=self.user_detail, data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, 401)
+    def test_url_users_list_negative_POST_invalid_email(self):
+        credentials = {
+            'email': 'invalid',
+            'password': 'password',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_list_negative_POST_missed_password(self):
+        credentials = {
+            'email': 'test_user@test.com',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_list_negative_POST_existing_email(self):
+        credentials = {
+            'email': self.user.email,
+            'password': 'password',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -1,54 +1,85 @@
+from django.urls import reverse
 from rest_framework import status
 
-from booking.tests.helper import LoggedInUserTestCase, LoggedInAdminTestCase
+from booking.tests.helper import LoggedInTestCase
 
 
-class TestTokenMixin:
-    """
-    Mixin class contains tests
-    """
+class LoginURLPositiveTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_login = reverse('token')
+        super(LoginURLPositiveTestCase, self).setUp()
 
-    def test_login_response_code(self):
-        self.assertEqual(self.response.status_code, status.HTTP_200_OK)
+    def test_url_login_positive_POST(self):
+        for cred in self.credentials:
+            with self.subTest(cred=cred):
+                response = self.client.post(path=self.url_login, data=cred)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIsNotNone(response.data.get('access', None))
+                self.assertGreater(response.data['access'], '')
+                self.assertIsNotNone(response.data.get('refresh', None))
+                self.assertGreater(response.data['refresh'], '')
 
-    def test_login_response_data(self):
-        data = self.response.data
-        self.assertIsNotNone(data)
-        self.assertEqual(type(data), dict)
-        self.assertSetEqual(set(data.keys()), {'access', 'refresh'})
+    def test_url_login_positive_GET(self):
+        for cred in self.credentials:
+            with self.subTest(cred=cred):
+                response = self.client.get(path=self.url_login, data=cred)
+                self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_login_without_credentials(self):
-        response = self.client.post(self.url_login, {})
-        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='This field is required',
-                            count=2)
-        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='email')
-        self.assertContains(response=response, status_code=status.HTTP_400_BAD_REQUEST, text='password')
+    def test_url_login_positive_PUT(self):
+        for cred in self.credentials:
+            with self.subTest(cred=cred):
+                response = self.client.put(path=self.url_login, data=cred)
+                self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_login_incorrect_credentials(self):
-        not_exist = {
-            'email': 'wrong email',
-            'password': 'wrong password'
+    def test_url_login_positive_PATCH(self):
+        for cred in self.credentials:
+            with self.subTest(cred=cred):
+                response = self.client.patch(path=self.url_login, data=cred)
+                self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_url_login_positive_DELETE(self):
+        for cred in self.credentials:
+            with self.subTest(cred=cred):
+                response = self.client.delete(path=self.url_login, data=cred)
+                self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class LoginURLNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_login = reverse('token')
+        super(LoginURLNegativeTestCase, self).setUp()
+
+    def test_url_login_negative_POST_no_password(self):
+        credentials = {
+            'email': self.credentials[0]['email']
         }
-        response = self.client.post(self.url_login, not_exist)
-        self.assertContains(response=response, status_code=status.HTTP_401_UNAUTHORIZED,
-                            text='No active account found with the given credentials')
+        response = self.client.post(path=self.url_login, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_login_wrong_methods(self):
-        response = self.client.get(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        response = self.client.put(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        response = self.client.patch(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        response = self.client.delete(self.url_login, self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+    def test_url_login_negative_POST_no_email(self):
+        credentials = {
+            'password': self.credentials[0]['password']
+        }
+        response = self.client.post(path=self.url_login, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_url_login_negative_POST_wrong_email(self):
+        credentials = self.credentials[0].copy()
+        credentials['email'] = 'another@test.com'
 
-class TestTokenUser(TestTokenMixin, LoggedInUserTestCase):
-    def setUp(self) -> None:
-        super(TestTokenUser, self).setUp()
+        response = self.client.post(path=self.url_login, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_url_login_negative_POST_wrong_password(self):
+        credentials = self.credentials[0].copy()
+        credentials['password'] = 'wrong password'
 
-class TestTokenAdmin(TestTokenMixin, LoggedInAdminTestCase):
-    def setUp(self) -> None:
-        super(TestTokenAdmin, self).setUp()
+        response = self.client.post(path=self.url_login, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_login_negative_POST_incorrect_email(self):
+        credentials = self.credentials[0].copy()
+        credentials['email'] = r'incorrect email'
+
+        response = self.client.post(path=self.url_login, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
