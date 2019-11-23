@@ -328,3 +328,38 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
             'is_active': True,
         }
         self.assertDictEqual(response.data, expected_response)
+
+
+class UsersListURLNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('user-list')
+        super(UsersListURLNegativeTestCase, self).setUp()
+
+    def test_url_users_list_negative_GET_unauthorized(self):
+        response = self.client.get(path=self.url_list)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data.get('results', None))
+        self.assertEqual(response.data['results'], [])
+
+    def test_url_users_list_negative_POST_invalid_email(self):
+        credentials = {
+            'email': 'invalid',
+            'password': 'password',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_list_negative_POST_missed_password(self):
+        credentials = {
+            'email': 'test_user@test.com',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_list_negative_POST_existing_email(self):
+        credentials = {
+            'email': self.user.email,
+            'password': 'password',
+        }
+        response = self.client.post(path=self.url_list, data=credentials)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
