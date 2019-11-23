@@ -70,8 +70,6 @@ class CustomUserList(FilterByUserMixin, ListCreateAPIView):
     def get_serializer_class(self):
         if self.request.user and self.request.user.is_staff:
             return serializers.CustomUserAdminSerializer
-        elif self.request.method == 'POST':
-            return serializers.CustomUserCreateSerializer
         else:
             return serializers.CustomUserSerializer
 

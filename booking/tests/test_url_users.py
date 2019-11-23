@@ -11,7 +11,8 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         expected_data = {
             'id': self.user.pk,
-            'email': self.user.email
+            'email': self.user.email,
+            'password': self.user.password,
         }
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -123,6 +124,7 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         expected_data = {
             'id': self.user.pk,
             'email': another_email,
+            'password': self.user.password,
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
@@ -258,6 +260,7 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         expected_result = {
             'id': self.user.pk,
             'email': self.user.email,
+            'password': self.user.password,
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data.get('results', None))

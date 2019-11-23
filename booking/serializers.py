@@ -16,16 +16,10 @@ class CustomUserPasswordHashMixin:
         return user
 
 
-class CustomUserCreateSerializer(CustomUserPasswordHashMixin, ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ['id', 'email', 'password']
-
-
 class CustomUserSerializer(CustomUserPasswordHashMixin, ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'email']
+        fields = ['id', 'email', 'password']
 
 
 class CustomUserAdminSerializer(CustomUserPasswordHashMixin, ModelSerializer):
