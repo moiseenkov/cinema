@@ -1,209 +1,323 @@
-from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
 from booking.models import Hall
-from booking.tests import helper
-from booking.tests.helper import LoggedInUserTestCase, LoggedInAdminTestCase
+from booking.tests.helper import LoggedInTestCase
 
 
-class TestURLHalls(TestCase):
-    def setUp(self) -> None:
-        self.url_list = reverse('hall-list')
-        self.halls = helper.get_halls_dict()
-
-    def test_url_halls_get_list(self):
-        response = self.client.get(path=self.url_list, data={})
+class HallsDetailPositiveTestCase(LoggedInTestCase):
+    def test_url_halls_detail_positive_GET(self):
+        hall = Hall(name='Test hall', rows_count=16, rows_size=32)
+        hall.save()
+        expected_response = {
+            'id': hall.pk,
+            'name': hall.name,
+            'rows_count': hall.rows_count,
+            'rows_size': hall.rows_size,
+            'seats_count': hall.rows_count * hall.rows_size,
+        }
+        response = self.client.get(path=reverse('hall-detail', args=[hall.pk]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('results', None))
-        self.assertEqual(len(response.data['results']), len(self.halls))
-        for expected in self.halls:
-            with self.subTest(expected=expected):
-                halls_found = [hall_ for hall_ in response.data['results'] if hall_['id'] == expected['id']]
-                self.assertEqual(len(halls_found), 1)
-                self.assertSetEqual(set(expected.items()), set(halls_found[0].items()))
+        self.assertDictEqual(response.data, expected_response)
 
-    def test_url_halls_get_detail(self):
-        for hall in self.halls:
-            with self.subTest(hall=hall):
-                response = self.client.get(path=reverse('hall-detail', args=[hall['id']]), data={})
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertIsInstance(response.data, dict)
-                self.assertDictEqual(response.data, hall)
-
-    def test_url_halls_post(self):
-        data = {
-            'name': 'New name'
+    def test_url_halls_detail_positive_PUT_admin(self):
+        input_data = {
+            'name': 'Test name',
+            'rows_count': 16,
+            'rows_size': 16,
         }
-        response = self.client.post(path=self.url_list, data=data)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_url_halls_put_patch_delete(self):
-        hall = self.halls[0]
-        url = reverse('hall-detail', args=[hall['id']])
-        data = {
-            'name': 'Changed name by unauthorised user'
+        hall = Hall.objects.all().first()
+        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        expected_response = {
+            'id': hall.pk,
+            'name': input_data['name'],
+            'rows_count': input_data['rows_count'],
+            'rows_size': input_data['rows_size'],
+            'seats_count': input_data['rows_count'] * input_data['rows_size'],
         }
-
-        with self.subTest():
-            response = self.client.put(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        with self.subTest():
-            response = self.client.patch(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        with self.subTest():
-            response = self.client.delete(path=url, data=data)
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-class TestURLHallsUser(LoggedInUserTestCase):
-    def setUp(self) -> None:
-        self.halls = helper.get_halls_dict()
-        super(TestURLHallsUser, self).setUp()
-
-    def test_url_halls_get_list(self):
-        response = self.client.get(path=reverse('hall-list'), data={}, HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('results', None))
-        self.assertEqual(len(response.data['results']), len(self.halls))
-        for expected in self.halls:
-            with self.subTest(expected=expected):
-                halls_found = [hall_ for hall_ in response.data['results'] if hall_['id'] == expected['id']]
-                self.assertEqual(len(halls_found), 1)
-                self.assertSetEqual(set(expected.items()), set(halls_found[0].items()))
+        self.assertDictEqual(response.data, expected_response)
 
-    def test_url_halls_get_detail(self):
-        for hall in self.halls:
-            with self.subTest(hall=hall):
-                response = self.client.get(path=reverse('hall-detail', args=[hall['id']]), data={},
-                                           HTTP_AUTHORIZATION=f'Bearer {self.token}')
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertIsInstance(response.data, dict)
-                self.assertDictEqual(response.data, hall)
-
-    def test_url_halls_post(self):
-        data = {
-            'name': 'New name'
+    def test_url_halls_detail_positive_PATCH_admin(self):
+        hall = Hall(name='Name', rows_count=12, rows_size=20)
+        hall.save()
+        input_data = {
+            'name': 'New name',
         }
-        response = self.client.post(path=reverse('hall-list'), data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        hall.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(hall.name, input_data['name'])
+        self.assertEqual(response.data['name'], input_data['name'])
+
+    def test_url_halls_detail_positive_DELETE_admin(self):
+        hall = Hall(name='Name', rows_count=12, rows_size=20)
+        hall.save()
+        pk = hall.pk
+        response = self.client.delete(path=reverse('hall-detail', args=[pk]),
+                                      HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        halls = Hall.objects.filter(pk=pk)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(halls.count(), 0)
+
+
+class HallsDetailNegativeTestCase(LoggedInTestCase):
+    def test_url_halls_detail_negative_GET_unknown(self):
+        ids = [hall.pk for hall in Hall.objects.all()]
+        pk = 0
+        while pk in ids:
+            pk += 1
+
+        response = self.client.get(path=reverse('hall-detail', args=[pk]))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_url_halls_detail_negative_PUT_user(self):
+        input_data = {
+            'name': 'Test name',
+            'rows_count': 16,
+            'rows_size': 16,
+        }
+        hall = Hall.objects.all().first()
+        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_halls_put_patch_delete(self):
-        hall = self.halls[0]
-        url = reverse('hall-detail', args=[hall['id']])
-        data = {
-            'name': 'Changed name by unauthorised user'
+    def test_url_halls_detail_negative_PUT_unauthorized(self):
+        input_data = {
+            'name': 'Test name',
+            'rows_count': 16,
+            'rows_size': 16,
         }
-
-        with self.subTest():
-            response = self.client.put(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-        with self.subTest():
-            response = self.client.patch(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-        with self.subTest():
-            response = self.client.delete(path=url, data=data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-
-class TestURLHallsAdmin(LoggedInAdminTestCase):
-    def setUp(self) -> None:
-        super(TestURLHallsAdmin, self).setUp()
-        self.new_hall_name = 'Test cinema hall'
-        self.new_hall_data = {
-            'name': self.new_hall_name,
-            'rows_count': 10,
-            'rows_size': 10
-        }
-
-    def test_url_halls_put(self):
         hall = Hall.objects.all().first()
-        self.assertIsNotNone(hall)
+        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        data = {
-            'name': 'Changed name'
-        }
-        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        data['rows_count'] = -10
-        data['rows_size'] = -10
-        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        data['rows_count'] = 1001
-        data['rows_size'] = 1001
-        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        data['id'] = hall.pk
-        data['seats_count'] = data['rows_count'] * data['rows_size']
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertDictEqual(response.data, data)
-
-    def test_url_halls_post(self):
-        response = self.client.post(path=reverse('hall-list'), data=self.new_hall_data,
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        new_hall = Hall.objects.filter(name=self.new_hall_name).first()
-        self.assertIsNotNone(new_hall)
-
-        expected_data = self.new_hall_data.copy()
-        expected_data['id'] = new_hall.pk
-        expected_data['seats_count'] = 10 * 10
-        self.assertDictEqual(response.data, expected_data)
-
-    def test_url_halls_post_empty(self):
-        response = self.client.post(path=reverse('hall-list'), data={},
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_url_halls_post_already_exist(self):
-        hall = Hall(**self.new_hall_data)
+    def test_url_halls_detail_negative_PATCH_user(self):
+        hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
-        response = self.client.post(path=reverse('hall-list'), data=self.new_hall_data,
-                                    HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_url_halls_patch(self):
-        hall = Hall.objects.all().first()
-        self.assertIsNotNone(hall)
-
-        changed_name = 'Changed name'
-        data = {
-            'name': changed_name
+        input_data = {
+            'name': 'New name',
         }
-        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data.get('name', None))
-        self.assertEqual(response.data['name'], changed_name)
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        hall.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_halls_patch_already_exist(self):
-        halls = Hall.objects.all()
-        self.assertGreaterEqual(halls.count(), 2)
-        hall1, hall2 = halls[0], halls[1]
-
-        data = {
-            'name': hall2.name
+    def test_url_halls_detail_negative_PATCH_unauthorized(self):
+        hall = Hall(name='Name', rows_count=12, rows_size=20)
+        hall.save()
+        input_data = {
+            'name': 'New name',
         }
-        response = self.client.patch(path=reverse('hall-detail', args=[hall1.pk]), data=data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                     content_type='application/json')
+        hall.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_halls_delete(self):
-        hall = Hall.objects.all().first()
-        self.assertIsNotNone(hall)
+    def test_url_halls_detail_negative_PATCH_incorrect_input(self):
+        hall = Hall(name='Name', rows_count=12, rows_size=20)
+        hall.save()
 
+        with self.subTest():
+            input_data = {
+                'name': '',
+            }
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest():
+            input_data = {
+                'rows_count': 0,
+            }
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest():
+            input_data = {
+                'rows_size': 0,
+            }
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_halls_detail_negative_DELETE_user(self):
+        hall_data = {
+            'name': 'Name',
+            'rows_count': 12,
+            'rows_size': 20,
+        }
+        hall = Hall(**hall_data)
+        hall.save()
+        pk = hall.pk
         response = self.client.delete(path=reverse('hall-detail', args=[hall.pk]),
-                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+                                      HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
 
-        response = self.client.delete(path=reverse('hall-detail', args=[hall.pk]),
-                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        halls = Hall.objects.filter(pk=pk)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(halls.count(), 1)
+        hall = halls[0]
+        self.assertEqual(hall.pk, pk)
+        self.assertEqual(hall.name, hall_data['name'])
+        self.assertEqual(hall.rows_count, hall_data['rows_count'])
+        self.assertEqual(hall.rows_size, hall_data['rows_size'])
+
+    def test_url_halls_detail_negative_DELETE_unauthorized(self):
+        hall_data = {
+            'name': 'Name',
+            'rows_count': 12,
+            'rows_size': 20,
+        }
+        hall = Hall(**hall_data)
+        hall.save()
+        pk = hall.pk
+        response = self.client.delete(path=reverse('hall-detail', args=[hall.pk]))
+
+        halls = Hall.objects.filter(pk=pk)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(halls.count(), 1)
+        hall = halls[0]
+        self.assertEqual(hall.pk, pk)
+        self.assertEqual(hall.name, hall_data['name'])
+        self.assertEqual(hall.rows_count, hall_data['rows_count'])
+        self.assertEqual(hall.rows_size, hall_data['rows_size'])
+
+
+class HallsListPositiveTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('hall-list')
+        super(HallsListPositiveTestCase, self).setUp()
+
+    def test_url_hall_list_positive_GET(self):
+        sub_test_parameters = [
+            {
+                # Unauthorized user
+                'path': self.url_list,
+            },
+            {
+                # Authorized user
+                'path': self.url_list,
+                'HTTP_AUTHORIZATION': f'Bearer {self.user_token}',
+            },
+            {
+                # Admin
+                'path': self.url_list,
+                'HTTP_AUTHORIZATION': f'Bearer {self.admin_token}',
+            },
+        ]
+        expected_response = [
+            {
+                'id': hall.pk,
+                'name': hall.name,
+                'rows_count': hall.rows_count,
+                'rows_size': hall.rows_size,
+                'seats_count': hall.rows_count * hall.rows_size,
+            } for hall in Hall.objects.all().order_by('-pk')
+        ]
+        for request_parameter_set in sub_test_parameters:
+            with self.subTest(request_parameter_Set=request_parameter_set):
+                response = self.client.get(**request_parameter_set)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIsNotNone(response.data.get('results', None))
+                for received, expected in zip(response.data['results'], expected_response):
+                    self.assertDictEqual(dict(received), expected)
+
+    def test_url_hall_list_positive_POST_admin(self):
+        data = {
+            'name': 'Name',
+            'rows_count': 16,
+            'rows_size': 26,
+        }
+        response = self.client.post(path=self.url_list, data=data, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        halls = Hall.objects.filter(name=data['name'])
+
+        self.assertEqual(halls.count(), 1)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        hall = halls[0]
+        expected_response = data.copy()
+        expected_response['id'] = hall.pk
+        expected_response['seats_count'] = data['rows_count'] * data['rows_size']
+        self.assertDictEqual(response.data, expected_response)
+
+
+class HallsListNegativeTestCase(LoggedInTestCase):
+    def setUp(self) -> None:
+        self.url_list = reverse('hall-list')
+        super(HallsListNegativeTestCase, self).setUp()
+
+    def test_url_hall_list_negative_POST_unauthorized(self):
+        data = {
+            'name': 'Name',
+            'rows_count': 16,
+            'rows_size': 26,
+        }
+        response = self.client.post(path=self.url_list)
+        halls = Hall.objects.filter(name=data['name'])
+
+        self.assertEqual(halls.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_hall_list_negative_POST_user(self):
+        data = {
+            'name': 'Name',
+            'rows_count': 16,
+            'rows_size': 26,
+        }
+        response = self.client.post(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        halls = Hall.objects.filter(name=data['name'])
+
+        self.assertEqual(halls.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_url_hall_list_negative_POST_incorrect_input(self):
+        cases = [
+            {
+                'name': 'Name',
+                'rows_count': 16,
+            },
+            {
+                'name': 'Name',
+                'rows_size': 16,
+            },
+            {
+                'rows_size': 16,
+                'rows_count': 16,
+            },
+            {
+                'name': '',
+                'rows_count': '',
+                'rows_size': '',
+            },
+            {
+                'name': 'Name',
+                'rows_count': -10,
+                'rows_size': 26,
+            },
+            {
+                'name': 'Name',
+                'rows_count': 10,
+                'rows_size': 0,
+            },
+        ]
+        halls_control = list(Hall.objects.all().order_by('-pk'))
+        for case in cases:
+            with self.subTest(case=case):
+                response = self.client.post(path=self.url_list, data=case,
+                                            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+                halls = list(Hall.objects.all().order_by('-pk'))
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(len(halls_control), len(halls))
+                for received, expected in zip(halls_control, halls):
+                    self.assertEqual(received.pk, expected.pk)
+                    self.assertEqual(received.name, expected.name)
+                    self.assertEqual(received.rows_count, expected.rows_count)
+                    self.assertEqual(received.rows_size, expected.rows_size)
