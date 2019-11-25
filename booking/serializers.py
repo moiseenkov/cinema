@@ -59,23 +59,27 @@ class ShowingSerializer(ModelSerializer):
     def validate(self, attrs):
         date_time = attrs.get('date_time', None)
         errors = dict()
-        if not date_time:
-            errors.setdefault('date_time', []).append("'date_time' field is required")
-        time_min = datetime.datetime.strptime(CINEMA_EARLIEST_TIME, '%H:%M').time()
-        time_max = datetime.datetime.strptime(CINEMA_LATEST_TIME, '%H:%M').time()
-        if not time_min <= date_time.time() <= time_max:
-            errors.setdefault('date_time', []).append(f"Time value should be in interval "
-                                                      f"[{time_min.isoformat()}, {time_max.isoformat()}]")
-        latest_showing = Showing.objects.filter(hall=attrs.get('hall', None),
-                                                date_time__lte=date_time).latest('date_time')
-        if latest_showing:
-            service_time = datetime.timedelta(minutes=CINEMA_CLEANING_PERIOD_MINUTES) + \
-                           datetime.timedelta(minutes=CINEMA_COMMERCIAL_PERIOD_MINUTES)
-            duration = latest_showing.movie.duration
-            start_time = latest_showing.date_time + datetime.timedelta(minutes=duration) + service_time
-            if start_time > date_time:
-                errors.setdefault('date_time', []).append(f'Hall is busy by showing {latest_showing} and '
-                                                          f'it will be free at {start_time.isoformat()}')
+
+        if date_time is None and any([not self.partial, self.instance is None]):
+            errors.setdefault('date_time', []).append('This field is required')
+        elif date_time is None:
+            return super(ShowingSerializer, self).validate(attrs=attrs)
+        else:
+            time_min = datetime.datetime.strptime(CINEMA_EARLIEST_TIME, '%H:%M').time()
+            time_max = datetime.datetime.strptime(CINEMA_LATEST_TIME, '%H:%M').time()
+            if not time_min <= date_time.time() <= time_max:
+                errors.setdefault('date_time', []).append(f"Time value should be in interval "
+                                                          f"[{time_min.isoformat()}, {time_max.isoformat()}]")
+            latest_showing = Showing.objects.filter(hall=attrs.get('hall', None),
+                                                    date_time__lte=date_time).order_by('-date_time').first()
+            if latest_showing and latest_showing != self.instance:
+                service_time = datetime.timedelta(minutes=CINEMA_CLEANING_PERIOD_MINUTES) + \
+                               datetime.timedelta(minutes=CINEMA_COMMERCIAL_PERIOD_MINUTES)
+                duration = latest_showing.movie.duration
+                start_time = latest_showing.date_time + datetime.timedelta(minutes=duration) + service_time
+                if start_time > date_time:
+                    errors.setdefault('date_time', []).append(f'Hall is busy by showing {latest_showing} and '
+                                                              f'it will be free at {start_time.isoformat()}')
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
