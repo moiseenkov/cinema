@@ -88,6 +88,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'tools.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 10,
+    'DATETIME_FORMAT': "%Y-%m-%dT%H:%M:%S%z",
 }
 
 SIMPLE_JWT = {
