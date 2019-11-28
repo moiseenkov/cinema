@@ -78,7 +78,7 @@ class Ticket(models.Model):
     date_time = models.DateTimeField()
     row_number = models.IntegerField(verbose_name='Row number', validators=[MinValueValidator(1)])
     seat_number = models.IntegerField(verbose_name='Seat number in row', validators=[MinValueValidator(1)])
-    paid = models.BooleanField(verbose_name='Paid', default=False)
+    receipt = models.CharField(max_length=36, blank=True)
 
     class Meta:
         verbose_name = 'Ticket'

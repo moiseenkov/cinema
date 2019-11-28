@@ -85,30 +85,48 @@ class ShowingSerializer(ModelSerializer):
         return attrs
 
 
-class TicketSerializer(ModelSerializer):
+class TicketBaseSerializer(ModelSerializer):
     price = serializers.ReadOnlyField(source='showing.price')
+    paid = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
-        fields = ['id', 'showing', 'row_number', 'seat_number', 'paid', 'user', 'price', 'date_time']
-        read_only_fields = fields.copy()
+        fields = [
+            'id',
+            'showing',
+            'row_number',
+            'seat_number',
+            'price',
+            'user',
+            'date_time',
+            'paid',
+            'receipt',
+        ]
+
+    def get_paid(self, obj=None):
+        return bool(obj.receipt)
 
 
-class TicketCreateSerializer(ModelSerializer):
+class TicketSerializer(TicketBaseSerializer):
+    class Meta:
+        model = TicketBaseSerializer.Meta.model
+        fields = TicketBaseSerializer.Meta.fields
+        read_only_fields = fields
+
+
+class TicketCreateSerializer(TicketBaseSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     date_time = serializers.HiddenField(default=serializers.CreateOnlyDefault(datetime.datetime.now()))
 
     class Meta:
-        model = Ticket
-        fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'date_time']
+        model = TicketBaseSerializer.Meta.model
 
 
-class TicketCreateAdminSerializer(ModelSerializer):
+class TicketCreateAdminSerializer(TicketBaseSerializer):
     date_time = serializers.HiddenField(default=serializers.CreateOnlyDefault(datetime.datetime.now()))
 
     class Meta:
-        model = Ticket
-        fields = ['id', 'showing', 'row_number', 'seat_number', 'user', 'date_time']
+        model = TicketBaseSerializer.Meta.model
 
 
 class PaymentSerializer(ModelSerializer):

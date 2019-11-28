@@ -192,7 +192,7 @@ class TicketsListView(FilterByUserMixin, ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
-    filterset_fields = ['user', 'showing', 'date_time', 'row_number', 'seat_number', 'paid']
+    filterset_fields = ['user', 'showing', 'date_time', 'row_number', 'seat_number']
     user_field = 'user'
 
     def get_serializer_class(self):
@@ -227,9 +227,7 @@ class PayForTicket(FilterByUserMixin, UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        data = {
-            'paid': True
-        }
+        data = []
         serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
