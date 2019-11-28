@@ -35,6 +35,8 @@ services:
     <<: *api
     command: celery -A cinema worker --loglevel=info
     ports: []
+    volumes:
+      - .:/app/
     depends_on:
       - rabbitmq
       - db

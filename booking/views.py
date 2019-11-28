@@ -1,3 +1,5 @@
+import uuid
+
 import django_filters
 from django.db.models import ProtectedError
 from rest_framework import status
@@ -9,6 +11,7 @@ from rest_framework.reverse import reverse
 
 from booking import serializers
 from booking import models
+from booking.tasks import pay_ticket
 
 
 @api_view(['GET'])
@@ -220,15 +223,18 @@ class PayForTicket(FilterByUserMixin, UpdateAPIView):
     """
     Performs payment for a booked ticket
     """
-    serializer_class = serializers.PaymentSerializer
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
     user_field = 'user'
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        data = []
-        serializer = self.get_serializer(instance, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+        if instance.receipt:
+            return Response(data=f'Ticket {instance.pk} is paid already', status=status.HTTP_400_BAD_REQUEST)
+
+        payment_uuid = uuid.uuid4()
+        pay_ticket.delay(pk=instance.pk, payment_uuid=payment_uuid)
+        data = {
+            'receipt': payment_uuid
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
