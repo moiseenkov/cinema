@@ -20,6 +20,7 @@ services:
       - db
       - rabbitmq
       - celery_workers
+      - celery_beat
     restart: unless-stopped
 
   db:
@@ -35,8 +36,14 @@ services:
     <<: *api
     command: celery -A cinema worker --loglevel=info
     ports: []
-    volumes:
-      - .:/app/
+    depends_on:
+      - rabbitmq
+      - db
+
+  celery_beat:
+    <<: *api
+    command: celery -A cinema beat --loglevel=DEBUG
+    ports: []
     depends_on:
       - rabbitmq
       - db

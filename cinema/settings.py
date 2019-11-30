@@ -15,6 +15,8 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 from datetime import timedelta
 
+from celery.schedules import crontab
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -117,7 +119,22 @@ DATABASES = {
             }
 
 
-CELERY_BROKER_URL = "amqp://guest:guest@rabbitmq:5672//"
+CELERY_BROKER_URL = 'amqp://guest:guest@rabbitmq:5672//'
+CELERY_RESULT_BACKEND = 'rpc://guest:guest@rabbitmq:5672//'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+CELERY_BEAT_SCHEDULE = {
+    'disable_bookings': {
+        'task': 'booking.tasks.disable_bookings',
+        'schedule': crontab(minute='*/1')
+    }
+}
+
+CELERY_ROUTES = {
+    'bookings.tasks.pay_ticket': {'queue': 'payments'},
+}
 
 
 # Password validation

@@ -1,10 +1,11 @@
+import datetime
 import logging
 import time
 
+import pytz
 from celery import shared_task
 
-from booking.models import Ticket
-
+from booking.models import Ticket, Showing
 
 logger = logging.getLogger(__name__)
 
@@ -26,3 +27,10 @@ def pay_ticket(*args, **kwargs):
 
     ticket.receipt = payment_uuid
     ticket.save()
+
+
+@shared_task(bind=True)
+def disable_bookings(*args, **kwargs):
+    deadline = datetime.datetime.now(tz=pytz.utc) + datetime.timedelta(hours=2)
+    showing_ids = [showing.pk for showing in Showing.objects.filter(date_time__lte=deadline)]
+    Ticket.objects.filter(showing__in=showing_ids, receipt='').delete()

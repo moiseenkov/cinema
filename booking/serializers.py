@@ -120,6 +120,7 @@ class TicketCreateSerializer(TicketBaseSerializer):
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
+        fields = TicketBaseSerializer.Meta.fields
 
 
 class TicketCreateAdminSerializer(TicketBaseSerializer):
@@ -127,3 +128,4 @@ class TicketCreateAdminSerializer(TicketBaseSerializer):
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
+        fields = TicketBaseSerializer.Meta.fields
