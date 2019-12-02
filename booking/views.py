@@ -11,6 +11,7 @@ from rest_framework.reverse import reverse
 
 from booking import serializers
 from booking import models
+from booking.serializers import TicketSerializer
 from booking.tasks import pay_ticket
 
 
@@ -223,6 +224,7 @@ class PayForTicket(FilterByUserMixin, UpdateAPIView):
     """
     Performs payment for a booked ticket
     """
+    serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
     user_field = 'user'
