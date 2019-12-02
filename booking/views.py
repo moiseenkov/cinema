@@ -34,26 +34,45 @@ def api_root(request, format_=None):
 
 class FilterByUserMixin:
     """
-    Filters queryset by pk. Admin gets queryset with no filtering. Attribute 'user_field' must be specified
+    APIView mixin filters queryset instances by user (is_staff = False): instance.user.pk == request.user.pk
+
+    By default queryset instances relate to CustomUser model via 'user' field,
+    however it can be overridden in derived class by defining 'user_field' attribute containing field name
+    that relate to CustomUer model.
+    Note: FilterByUserMixin filters only for non admin users (is_staff = False). No filtering happens for admin
     """
     def get_queryset(self):
         user = self.request.user
-        filtering = {self.user_field: user.pk}
+        user_field = getattr(self, 'user_field', 'user')
+        filtering = {user_field: user.pk}
         queryset = self.queryset if user.is_staff else self.queryset.filter(**filtering)
         return queryset.all()
 
 
 class PermissionSelectorMixin:
+    """
+    APIView mixin overrides APIView.get_permissions() by setting up permissions according to HTTP method mapping
+
+    By default PermissionSelectorMixin creates instances for all classes in self.permission_classes,
+    however it can use dict self.permission_classes_by_method where
+    key - HTTP method [GET|POST|PUT|PATCH|DELETE],
+    value - [PermissionClass, ]
+
+    """
     def get_permissions(self):
-        try:
-            # return permission_classes depending on `request.method`
-            return [permission() for permission in self.permission_classes_by_method[self.request.method]]
-        except KeyError:
-            # method is not set return default permission_classes
-            return [permission() for permission in self.permission_classes]
+        mapping = getattr(self, 'permission_classes_by_method', None)
+        method = self.request.method
+        permission_classes = mapping[method] if mapping and method in mapping else self.permission_classes
+        return [permission() for permission in permission_classes]
 
 
 class ProtectedErrorOnDeleteMixin:
+    """
+    APIView mixin prevents deletion of locked objects
+
+    Mixin catches ProtectedError exception and returns HTTP_423_LOCKED if the object was locked (has external
+    references)
+    """
     def delete(self, request, *args, **kwargs):
         try:
             return super().delete(request, *args, **kwargs)
@@ -63,7 +82,13 @@ class ProtectedErrorOnDeleteMixin:
 
 class CustomUserList(FilterByUserMixin, ListCreateAPIView):
     """
-    Returns list of available users and allows to create new user
+    Represent users list
+
+    Public url allows to create new user with email and password. **Email should be unique!**
+    **Anonymous users** can view empty users list and allowed to create new user (non admin).
+    **Users** can view paginated list of users containing only their our own information
+    and allowed to create new user (non admin).
+    **Admins** can view paginated users list containing all users and create new admin as well as non admin users.
     """
     permission_classes = [AllowAny]
     queryset = models.CustomUser.objects.all()
@@ -80,7 +105,9 @@ class CustomUserList(FilterByUserMixin, ListCreateAPIView):
 
 class CustomUserDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     """
-    Returns user's information and allows to update and delete it
+    Represents users detail information
+
+    Allows users and admins view/edit/delete users by id. Users have access to their information only.
     """
     permission_classes = [IsAuthenticated]
     queryset = models.CustomUser.objects.all()
@@ -93,6 +120,11 @@ class CustomUserDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
             return serializers.CustomUserSerializer
 
     def delete(self, request, *args, **kwargs):
+        """
+        Delete selected user
+
+        DELETE requests deactivate users (is_active=False) instead of physical removal from database.
+        """
         instance = self.get_object()
         instance.is_active = False
         instance.save()
@@ -101,7 +133,9 @@ class CustomUserDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
 
 class HallsList(PermissionSelectorMixin, ListCreateAPIView):
     """
-    Returns list of cinema halls and allows admin to create new hall
+    Represents cinema halls list
+
+    Public url allows anyone to view cinema halls information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.HallSerializer
     permission_classes = [AllowAny]
@@ -116,7 +150,9 @@ class HallsList(PermissionSelectorMixin, ListCreateAPIView):
 
 class HallsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
-    Returns detailed information about cinema hall. Admins allowed to create, update and delete it
+    Represents cinema hall detailed information
+
+    Public url allows anyone to view cinema hall detailed information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.HallSerializer
     permission_classes = [AllowAny]
@@ -128,10 +164,21 @@ class HallsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retrieve
         'DELETE': (IsAdminUser,),
     }
 
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete cinema hall (admins only)
+
+        Delete cinema hall if there is no object in database that refers to current cinema hall.
+        Otherwise it returns HTTP_423_LOCKED
+        """
+        super(HallsDetail, self).delete(request, *args, **kwargs)
+
 
 class MoviesListView(PermissionSelectorMixin, ListCreateAPIView):
     """
-    Returns list of movies and allows admin to create movie
+    Represents movies list
+
+    Public url allows anyone to view movies information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.MovieSerializer
     permission_classes = [AllowAny]
@@ -146,7 +193,9 @@ class MoviesListView(PermissionSelectorMixin, ListCreateAPIView):
 
 class MoviesDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
-    Returns detailed information about cinema hall. Admins allowed to create, update and delete it
+    Represents movie detailed information
+
+    Public url allows anyone to view movie detailed information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.MovieSerializer
     permission_classes = [AllowAny]
@@ -157,11 +206,22 @@ class MoviesDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retriev
         'PATCH': (IsAdminUser,),
         'DELETE': (IsAdminUser,),
     }
+    
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete movie (admins only)
+
+        Delete movie if there is no object in database that refers to current movie.
+        Otherwise it returns HTTP_423_LOCKED
+        """
+        super(MoviesDetail, self).delete(request, *args, **kwargs)
 
 
 class ShowingsListView(PermissionSelectorMixin, ListCreateAPIView):
     """
-    Returns list of showings and allows admin to create new showing
+    Represents showings list
+
+    Public url allows anyone to view showings information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.ShowingSerializer
     permission_classes = [AllowAny]
@@ -176,7 +236,9 @@ class ShowingsListView(PermissionSelectorMixin, ListCreateAPIView):
 
 class ShowingsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, RetrieveUpdateDestroyAPIView):
     """
-    Returns detailed information about showing. Admins allowed to create, update and delete it
+    Represents showing detailed information
+
+    Public url allows anyone to view showing detailed information. Only admins allowed to create/update/delete.
     """
     serializer_class = serializers.ShowingSerializer
     permission_classes = [AllowAny]
@@ -187,11 +249,22 @@ class ShowingsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retri
         'PATCH': (IsAdminUser, ),
         'DELETE': (IsAdminUser, ),
     }
+    
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete showing (admins only)
+
+        Delete showing if there is no object in database that refers to current showing.
+        Otherwise it returns HTTP_423_LOCKED
+        """
+        super(ShowingsDetail, self).delete(request, *args, **kwargs)
 
 
 class TicketsListView(FilterByUserMixin, ListCreateAPIView):
     """
-    Returns list of showings and allows admin to create new showing
+    Represents tickets list
+
+    Url allows authenticated users to view list of their tickets and book new tickets. Admins can view all tickets.
     """
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
@@ -211,8 +284,9 @@ class TicketsListView(FilterByUserMixin, ListCreateAPIView):
 
 class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     """
-    Returns detailed information about tickets. Authenticated users allowed to create, update and delete their tickets.
-    Admin allowed to create, update and delete any ticket
+    Represents ticket detailed information
+
+    Url allows authenticated users to view selected ticket's  detailed information. Admins can view all tickets.
     """
     serializer_class = serializers.TicketSerializer
     permission_classes = [IsAuthenticated]
@@ -223,6 +297,7 @@ class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
 class PayForTicket(FilterByUserMixin, UpdateAPIView):
     """
     Performs payment for a booked ticket
+    
     """
     serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]
