@@ -39,7 +39,13 @@ docker-compose exec api python manage.py test -v 2
 ```
 
 ## Documantation
-http://localhost:8000/swagger/
-http://localhost:8000/swagger.yaml/
-http://localhost:8000/swagger.json/
+
+http://localhost:8000/
+
 http://localhost:8000/redoc/
+
+http://localhost:8000/swagger/
+
+http://localhost:8000/swagger.yaml/
+
+http://localhost:8000/swagger.json/
