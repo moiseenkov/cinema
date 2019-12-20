@@ -171,7 +171,7 @@ class HallsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retrieve
         Delete cinema hall if there is no object in database that refers to current cinema hall.
         Otherwise it returns HTTP_423_LOCKED
         """
-        super(HallsDetail, self).delete(request, *args, **kwargs)
+        return super(HallsDetail, self).delete(request, *args, **kwargs)
 
 
 class MoviesListView(PermissionSelectorMixin, ListCreateAPIView):
@@ -214,7 +214,7 @@ class MoviesDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retriev
         Delete movie if there is no object in database that refers to current movie.
         Otherwise it returns HTTP_423_LOCKED
         """
-        super(MoviesDetail, self).delete(request, *args, **kwargs)
+        return super(MoviesDetail, self).delete(request, *args, **kwargs)
 
 
 class ShowingsListView(PermissionSelectorMixin, ListCreateAPIView):
@@ -257,7 +257,7 @@ class ShowingsDetail(ProtectedErrorOnDeleteMixin, PermissionSelectorMixin, Retri
         Delete showing if there is no object in database that refers to current showing.
         Otherwise it returns HTTP_423_LOCKED
         """
-        super(ShowingsDetail, self).delete(request, *args, **kwargs)
+        return super(ShowingsDetail, self).delete(request, *args, **kwargs)
 
 
 class TicketsListView(FilterByUserMixin, ListCreateAPIView):
