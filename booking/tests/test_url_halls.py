@@ -1,3 +1,8 @@
+"""
+Tests for endpoints:
+ - /halls/
+ - /halls/<int:pk>/
+"""
 from django.urls import reverse
 from rest_framework import status
 
@@ -6,7 +11,13 @@ from booking.tests.helper import LoggedInTestCase
 
 
 class HallsDetailPositiveTestCase(LoggedInTestCase):
-    def test_url_halls_detail_positive_GET(self):
+    """
+    Positive test case for hall detail: /halls/<int:pk>/
+    """
+    def test_url_halls_detail_positive_get(self):
+        """
+        Positive test checks response for GET request to /halls/<int:pk>/
+        """
         hall = Hall(name='Test hall', rows_count=16, rows_size=32)
         hall.save()
         expected_response = {
@@ -20,15 +31,20 @@ class HallsDetailPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_halls_detail_positive_PUT_admin(self):
+    def test_url_halls_detail_positive_put_admin(self):
+        """
+        Positive test checks response for admin's PUT request to /halls/<int:pk>/
+        """
         input_data = {
             'name': 'Test name',
             'rows_count': 16,
             'rows_size': 16,
         }
         hall = Hall.objects.all().first()
-        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_response = {
             'id': hall.pk,
             'name': input_data['name'],
@@ -39,53 +55,71 @@ class HallsDetailPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_halls_detail_positive_PATCH_admin(self):
+    def test_url_halls_detail_positive_patch_admin(self):
+        """
+        Positive test checks response for admin's PATCH request to /halls/<int:pk>/
+        """
         hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         hall.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(hall.name, input_data['name'])
         self.assertEqual(response.data['name'], input_data['name'])
 
-    def test_url_halls_detail_positive_DELETE_admin(self):
+    def test_url_halls_detail_positive_delete_admin(self):
+        """
+        Positive test checks response for admin's DELETE request to /halls/<int:pk>/
+        """
         hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
-        pk = hall.pk
-        response = self.client.delete(path=reverse('hall-detail', args=[pk]),
+        pkey = hall.pk
+        response = self.client.delete(path=reverse('hall-detail', args=[pkey]),
                                       HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        halls = Hall.objects.filter(pk=pk)
+        halls = Hall.objects.filter(pk=pkey)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(halls.count(), 0)
 
 
 class HallsDetailNegativeTestCase(LoggedInTestCase):
-    def test_url_halls_detail_negative_GET_unknown(self):
-        ids = [hall.pk for hall in Hall.objects.all()]
-        pk = 0
-        while pk in ids:
-            pk += 1
-
-        response = self.client.get(path=reverse('hall-detail', args=[pk]))
+    """
+    Negative test case for hall detail: /halls/<int:pk>/
+    """
+    def test_url_halls_detail_negative_get_unknown(self):
+        """
+        Negative test checks 404 status code on /halls/<not existing hall>
+        """
+        pkey = max(hall.pk for hall in Hall.objects.all()) + 1
+        response = self.client.get(path=reverse('hall-detail', args=[pkey]))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_url_halls_detail_negative_PUT_user(self):
+    def test_url_halls_detail_negative_put_user(self):
+        """
+        Negative test checks that users cannot modify halls via PUT requests
+        """
         input_data = {
             'name': 'Test name',
             'rows_count': 16,
             'rows_size': 16,
         }
         hall = Hall.objects.all().first()
-        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.put(path=reverse('hall-detail', args=[hall.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_halls_detail_negative_PUT_unauthorized(self):
+    def test_url_halls_detail_negative_put_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify halls via PUT requests
+        """
         input_data = {
             'name': 'Test name',
             'rows_count': 16,
@@ -96,29 +130,41 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
                                    content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_halls_detail_negative_PATCH_user(self):
+    def test_url_halls_detail_negative_patch_user(self):
+        """
+        Negative test checks that users cannot modify halls via PATCH requests
+        """
         hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         hall.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_halls_detail_negative_PATCH_unauthorized(self):
+    def test_url_halls_detail_negative_patch_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify halls via PATCH requests
+        """
         hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+        response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                     data=input_data,
                                      content_type='application/json')
         hall.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_halls_detail_negative_PATCH_incorrect_input(self):
+    def test_url_halls_detail_negative_patch_incorrect_input(self):
+        """
+        Negative test checks incorrect input while modifying halls
+        """
         hall = Hall(name='Name', rows_count=12, rows_size=20)
         hall.save()
 
@@ -126,7 +172,8 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
             input_data = {
                 'name': '',
             }
-            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -135,7 +182,8 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
             input_data = {
                 'rows_count': 0,
             }
-            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -144,12 +192,16 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
             input_data = {
                 'rows_size': 0,
             }
-            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]), data=input_data,
+            response = self.client.patch(path=reverse('hall-detail', args=[hall.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_halls_detail_negative_DELETE_user(self):
+    def test_url_halls_detail_negative_delete_user(self):
+        """
+        Negative test checks that users cannot delete halls
+        """
         hall_data = {
             'name': 'Name',
             'rows_count': 12,
@@ -157,20 +209,23 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
         }
         hall = Hall(**hall_data)
         hall.save()
-        pk = hall.pk
+        pkey = hall.pk
         response = self.client.delete(path=reverse('hall-detail', args=[hall.pk]),
                                       HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
 
-        halls = Hall.objects.filter(pk=pk)
+        halls = Hall.objects.filter(pk=pkey)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(halls.count(), 1)
         hall = halls[0]
-        self.assertEqual(hall.pk, pk)
+        self.assertEqual(hall.pk, pkey)
         self.assertEqual(hall.name, hall_data['name'])
         self.assertEqual(hall.rows_count, hall_data['rows_count'])
         self.assertEqual(hall.rows_size, hall_data['rows_size'])
 
-    def test_url_halls_detail_negative_DELETE_unauthorized(self):
+    def test_url_halls_detail_negative_delete_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot delete halls
+        """
         hall_data = {
             'name': 'Name',
             'rows_count': 12,
@@ -178,25 +233,31 @@ class HallsDetailNegativeTestCase(LoggedInTestCase):
         }
         hall = Hall(**hall_data)
         hall.save()
-        pk = hall.pk
+        pkey = hall.pk
         response = self.client.delete(path=reverse('hall-detail', args=[hall.pk]))
 
-        halls = Hall.objects.filter(pk=pk)
+        halls = Hall.objects.filter(pk=pkey)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(halls.count(), 1)
         hall = halls[0]
-        self.assertEqual(hall.pk, pk)
+        self.assertEqual(hall.pk, pkey)
         self.assertEqual(hall.name, hall_data['name'])
         self.assertEqual(hall.rows_count, hall_data['rows_count'])
         self.assertEqual(hall.rows_size, hall_data['rows_size'])
 
 
 class HallsListPositiveTestCase(LoggedInTestCase):
+    """
+    Positive test case for halls list: /halls/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('hall-list')
         super(HallsListPositiveTestCase, self).setUp()
 
-    def test_url_hall_list_positive_GET(self):
+    def test_url_hall_list_positive_get(self):
+        """
+        Positive test checks response for GET request to /halls/
+        """
         sub_test_parameters = [
             {
                 # Unauthorized user
@@ -230,13 +291,18 @@ class HallsListPositiveTestCase(LoggedInTestCase):
                 for received, expected in zip(response.data['results'], expected_response):
                     self.assertDictEqual(dict(received), expected)
 
-    def test_url_hall_list_positive_POST_admin(self):
+    def test_url_hall_list_positive_post_admin(self):
+        """
+        Positive test checks response for admin's POST request to /halls/
+        """
         data = {
             'name': 'Name',
             'rows_count': 16,
             'rows_size': 26,
         }
-        response = self.client.post(path=self.url_list, data=data, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.post(path=self.url_list,
+                                    data=data,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         halls = Hall.objects.filter(name=data['name'])
 
         self.assertEqual(halls.count(), 1)
@@ -249,11 +315,17 @@ class HallsListPositiveTestCase(LoggedInTestCase):
 
 
 class HallsListNegativeTestCase(LoggedInTestCase):
+    """
+    Negative test case for halls list: /halls/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('hall-list')
         super(HallsListNegativeTestCase, self).setUp()
 
-    def test_url_hall_list_negative_POST_unauthorized(self):
+    def test_url_hall_list_negative_post_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot create halls
+        """
         data = {
             'name': 'Name',
             'rows_count': 16,
@@ -265,19 +337,26 @@ class HallsListNegativeTestCase(LoggedInTestCase):
         self.assertEqual(halls.count(), 0)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_hall_list_negative_POST_user(self):
+    def test_url_hall_list_negative_post_user(self):
+        """
+        Negative test checks that users cannot create halls
+        """
         data = {
             'name': 'Name',
             'rows_count': 16,
             'rows_size': 26,
         }
-        response = self.client.post(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.post(path=self.url_list,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         halls = Hall.objects.filter(name=data['name'])
 
         self.assertEqual(halls.count(), 0)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_hall_list_negative_POST_incorrect_input(self):
+    def test_url_hall_list_negative_post_incorrect_input(self):
+        """
+        Negative test checks incorrect input while creating halls
+        """
         cases = [
             {
                 'name': 'Name',

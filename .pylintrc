@@ -1,0 +1,4 @@
+[DESIGN]
+
+# Maximum number of parents for a class (see R0901).
+max-parents=10

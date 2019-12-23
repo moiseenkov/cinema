@@ -1,3 +1,8 @@
+"""
+Tests for endpoints:
+ - /showings/
+ - /showings/<int:pk>/
+"""
 import datetime
 
 from django.urls import reverse
@@ -8,6 +13,9 @@ from booking.tests.helper import LoggedInTestCase
 
 
 class ShowingsBaseTestCase(LoggedInTestCase):
+    """
+    Base test case prepares movie and hall instances for test showings
+    """
     def setUp(self) -> None:
         self.movie = Movie(name='Movie', duration=120, premiere_year=1999)
         self.movie.save()
@@ -17,9 +25,17 @@ class ShowingsBaseTestCase(LoggedInTestCase):
 
 
 class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
-    def test_url_showings_detail_positive_GET(self):
+    """
+    Positive test case for showing detail: /showings/<int:pk>/
+    """
+    def test_url_showings_detail_positive_get(self):
+        """
+        Positive test checks response for GET request to /showings/<int:pk>/
+        """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0, tzinfo=datetime.timezone.utc), price='9.99')
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                                                      tzinfo=datetime.timezone.utc),
+                          price='9.99')
         showing.save()
 
         expected_response = {
@@ -33,9 +49,14 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_showings_detail_positive_PUT_admin(self):
+    def test_url_showings_detail_positive_put_admin(self):
+        """
+        Positive test checks response for admin's PUT request to /showings/<int:pk>/
+        """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0, tzinfo=datetime.timezone.utc), price='9.99')
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                                                      tzinfo=datetime.timezone.utc),
+                          price='9.99')
         showing.save()
 
         input_data = {
@@ -44,8 +65,10 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
             'date_time': showing.date_time,
             'price': '4.99'
         }
-        response = self.client.put(path=reverse('showing-detail', args=[showing.pk]), data=input_data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.put(path=reverse('showing-detail', args=[showing.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_response = {
             'id': showing.pk,
             'hall': self.hall.pk,
@@ -56,16 +79,23 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_showings_detail_positive_PATCH_admin(self):
+    def test_url_showings_detail_positive_patch_admin(self):
+        """
+        Positive test checks response for admin's PATCH request to /showings/<int:pk>/
+        """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0, tzinfo=datetime.timezone.utc), price='9.99')
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                                                      tzinfo=datetime.timezone.utc),
+                          price='9.99')
         showing.save()
 
         input_data = {
             'price': '4.99'
         }
-        response = self.client.patch(path=reverse('showing-detail', args=[showing.pk]), data=input_data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.patch(path=reverse('showing-detail', args=[showing.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_response = {
             'id': showing.pk,
             'hall': self.hall.pk,
@@ -76,23 +106,34 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_showings_detail_positive_DELETE_admin(self):
+    def test_url_showings_detail_positive_delete_admin(self):
+        """
+        Positive test checks response for admin's DELETE request to /showings/<int:pk>/
+        """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0, tzinfo=datetime.timezone.utc),
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                                                      tzinfo=datetime.timezone.utc),
                           price='9.99')
         showing.save()
         response = self.client.delete(path=reverse('showing-detail', args=[showing.pk]),
-                                      content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+                                      content_type='application/json',
+                                      HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
 class ShowingsDetailNegativeTestCase(ShowingsBaseTestCase):
-    pass
+    """
+    Negative test case for showing detail: /showings/<int:pk>/
+    """
 
 
 class ShowingsListPositiveTestCase(ShowingsBaseTestCase):
-    pass
+    """
+    Positive test case for showings list: /showings/
+    """
 
 
 class ShowingsListNegativeTestCase(ShowingsBaseTestCase):
-    pass
+    """
+    Negative test case for showings list: /showings/
+    """

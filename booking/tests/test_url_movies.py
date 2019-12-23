@@ -1,3 +1,8 @@
+"""
+Tests for endpoints:
+ - /movies/
+ - /movies/<int:pk>/
+"""
 from django.urls import reverse
 from rest_framework import status
 
@@ -7,7 +12,13 @@ from booking.tests.helper import LoggedInTestCase
 
 
 class MoviesDetailPositiveTestCase(LoggedInTestCase):
-    def test_url_movies_detail_positive_GET(self):
+    """
+    Positive test case for movie detail: /movies/<int:pk>/
+    """
+    def test_url_movies_detail_positive_get(self):
+        """
+        Positive test checks response for GET request to /movies/<int:pk>/
+        """
         movie = Movie(name='Test movie', duration=120, premiere_year=2019)
         movie.save()
         expected_response = {
@@ -20,7 +31,10 @@ class MoviesDetailPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_movies_detail_positive_PUT_admin(self):
+    def test_url_movies_detail_positive_put_admin(self):
+        """
+        Positive test checks response for admin's PUT request to /movies/<int:pk>/
+        """
         input_data = {
             'name': 'Test name',
             'duration': 120,
@@ -28,8 +42,10 @@ class MoviesDetailPositiveTestCase(LoggedInTestCase):
         }
         movie = Movie(name='Name', duration=100)
         movie.save()
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_response = {
             'id': movie.pk,
             'name': input_data['name'],
@@ -39,44 +55,58 @@ class MoviesDetailPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_movies_detail_positive_PATCH_admin(self):
+    def test_url_movies_detail_positive_patch_admin(self):
+        """
+        Positive test checks response for admin's PATCH request to /movies/<int:pk>/
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         movie.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(movie.name, input_data['name'])
         self.assertEqual(response.data['name'], input_data['name'])
 
-    def test_url_movies_detail_positive_DELETE_admin(self):
+    def test_url_movies_detail_positive_delete_admin(self):
+        """
+        Positive test checks response for admin's DELETE request to /movies/<int:pk>/
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
-        pk = movie.pk
-        response = self.client.delete(path=reverse('movie-detail', args=[pk]),
+        pkey = movie.pk
+        response = self.client.delete(path=reverse('movie-detail', args=[pkey]),
                                       HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        movies = Movie.objects.filter(pk=pk)
+        movies = Movie.objects.filter(pk=pkey)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(movies.count(), 0)
 
 
 class MoviesDetailNegativeTestCase(LoggedInTestCase):
-    def test_url_movies_detail_negative_GET_unknown(self):
-        movies = [Movie(name='Name', duration=120, premiere_year=year) for year in [2000, 2001, 2002]]
+    """
+    Negative test case for movie detail: /movies/<int:pk>/
+    """
+    def test_url_movies_detail_negative_get_unknown(self):
+        """
+        Negative test checks 404 status code on /movies/<not existing hall>
+        """
+        period = [2000, 2001, 2002]
+        movies = [Movie(name='Name', duration=120, premiere_year=year) for year in period]
         Movie.objects.bulk_create(movies)
-        ids = [movie.pk for movie in Movie.objects.all()]
-        pk = 0
-        while pk in ids:
-            pk += 1
-
-        response = self.client.get(path=reverse('movie-detail', args=[pk]))
+        pkey = max(movie.pk for movie in Movie.objects.all()) + 1
+        response = self.client.get(path=reverse('movie-detail', args=[pkey]))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_url_movies_detail_negative_PUT_user(self):
+    def test_url_movies_detail_negative_put_user(self):
+        """
+        Negative test checks that users cannot modify movies via PUT requests
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
         input_data = {
@@ -84,11 +114,16 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
             'duration': 16,
             'premiere_year': 2005,
         }
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
-                                   content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_movies_detail_negative_PUT_unauthorized(self):
+    def test_url_movies_detail_negative_put_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify movies via PUT requests
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
         input_data = {
@@ -96,33 +131,46 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
             'duration': 16,
             'premiere_year': 2005,
         }
-        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+        response = self.client.put(path=reverse('movie-detail', args=[movie.pk]),
+                                   data=input_data,
                                    content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_movies_detail_negative_PATCH_user(self):
+    def test_url_movies_detail_negative_patch_user(self):
+        """
+        Negative test checks that users cannot modify movies via PATCH requests
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
-                                     content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         movie.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_movies_detail_negative_PATCH_unauthorized(self):
+    def test_url_movies_detail_negative_patch_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify movies via PATCH requests
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
         input_data = {
             'name': 'New name',
         }
-        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+        response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                     data=input_data,
                                      content_type='application/json')
         movie.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_movies_detail_negative_PATCH_incorrect_input(self):
+    def test_url_movies_detail_negative_patch_incorrect_input(self):
+        """
+        Negative test checks incorrect input while modifying movies
+        """
         movie = Movie(name='Name', duration=120, premiere_year=1999)
         movie.save()
 
@@ -132,7 +180,8 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
                 'duration': 120,
                 'premiere_year': 2000,
             }
-            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -143,7 +192,8 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
                 'duration': 0,
                 'premiere_year': 2000,
             }
-            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -154,12 +204,16 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
                 'duration': 20,
                 'premiere_year': 1700,
             }
-            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]), data=input_data,
+            response = self.client.patch(path=reverse('movie-detail', args=[movie.pk]),
+                                         data=input_data,
                                          content_type='application/json',
                                          HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_movies_detail_negative_DELETE_user(self):
+    def test_url_movies_detail_negative_delete_user(self):
+        """
+        Negative test checks that users cannot delete movies
+        """
         movie_data = {
             'name': 'Name for movie',
             'duration': 20,
@@ -167,20 +221,23 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
         }
         movie = Movie(**movie_data)
         movie.save()
-        pk = movie.pk
+        pkey = movie.pk
         response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]),
                                       HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
 
-        movies = Movie.objects.filter(pk=pk)
+        movies = Movie.objects.filter(pk=pkey)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(movies.count(), 1)
         movie = movies[0]
-        self.assertEqual(movie.pk, pk)
+        self.assertEqual(movie.pk, pkey)
         self.assertEqual(movie.name, movie_data['name'])
         self.assertEqual(movie.duration, movie_data['duration'])
         self.assertEqual(movie.premiere_year, movie_data['premiere_year'])
 
-    def test_url_movies_detail_negative_DELETE_unauthorized(self):
+    def test_url_movies_detail_negative_delete_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot delete movies
+        """
         movie_data = {
             'name': 'Name for movie',
             'duration': 20,
@@ -188,25 +245,31 @@ class MoviesDetailNegativeTestCase(LoggedInTestCase):
         }
         movie = Movie(**movie_data)
         movie.save()
-        pk = movie.pk
+        pkey = movie.pk
         response = self.client.delete(path=reverse('movie-detail', args=[movie.pk]))
 
-        movies = Movie.objects.filter(pk=pk)
+        movies = Movie.objects.filter(pk=pkey)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(movies.count(), 1)
         movie = movies[0]
-        self.assertEqual(movie.pk, pk)
+        self.assertEqual(movie.pk, pkey)
         self.assertEqual(movie.name, movie_data['name'])
         self.assertEqual(movie.duration, movie_data['duration'])
         self.assertEqual(movie.premiere_year, movie_data['premiere_year'])
 
 
 class MoviesListPositiveTestCase(LoggedInTestCase):
+    """
+    Positive test case for halls list: /movies/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('movie-list')
         super(MoviesListPositiveTestCase, self).setUp()
 
-    def test_url_movie_list_positive_GET(self):
+    def test_url_movie_list_positive_get(self):
+        """
+        Positive test checks response for GET request to /movies/
+        """
         sub_test_parameters = [
             {
                 # Unauthorized user
@@ -223,7 +286,8 @@ class MoviesListPositiveTestCase(LoggedInTestCase):
                 'HTTP_AUTHORIZATION': f'Bearer {self.admin_token}',
             },
         ]
-        movies = [Movie(name="Name", duration=120, premiere_year=year) for year in [2000, 2001, 2002]]
+        period = [2000, 2001, 2002]
+        movies = [Movie(name="Name", duration=120, premiere_year=year) for year in period]
         Movie.objects.bulk_create(movies)
         expected_response = [
             {
@@ -241,13 +305,18 @@ class MoviesListPositiveTestCase(LoggedInTestCase):
                 for received, expected in zip(response.data['results'], expected_response):
                     self.assertDictEqual(dict(received), expected)
 
-    def test_url_movie_list_positive_POST_admin(self):
+    def test_url_movie_list_positive_post_admin(self):
+        """
+        Positive test checks response for admin's POST request to /movies/
+        """
         data = {
             'name': 'Name',
             'duration': 20,
             'premiere_year': 2000,
         }
-        response = self.client.post(path=self.url_list, data=data, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        response = self.client.post(path=self.url_list,
+                                    data=data,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         movies = Movie.objects.filter(name=data['name'])
 
         self.assertEqual(movies.count(), 1)
@@ -259,11 +328,17 @@ class MoviesListPositiveTestCase(LoggedInTestCase):
 
 
 class MoviesListNegativeTestCase(LoggedInTestCase):
+    """
+    Negative test case for halls list: /movies/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('movie-list')
         super(MoviesListNegativeTestCase, self).setUp()
 
-    def test_url_movie_list_negative_POST_unauthorized(self):
+    def test_url_movie_list_negative_post_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot create movie
+        """
         data = {
             'name': 'Name',
             'duration': 20,
@@ -275,19 +350,26 @@ class MoviesListNegativeTestCase(LoggedInTestCase):
         self.assertEqual(movies.count(), 0)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_movie_list_negative_POST_user(self):
+    def test_url_movie_list_negative_post_user(self):
+        """
+        Negative test checks that users cannot create movies
+        """
         data = {
             'name': 'Name',
             'duration': 20,
             'premiere_year': 2000,
         }
-        response = self.client.post(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        response = self.client.post(path=self.url_list,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         movies = Movie.objects.filter(name=data['name'])
 
         self.assertEqual(movies.count(), 0)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_url_movie_list_negative_POST_incorrect_input(self):
+    def test_url_movie_list_negative_post_incorrect_input(self):
+        """
+        Negative test checks incorrect input while creating movies
+        """
         cases = [
             {
                 'name': 'Name',

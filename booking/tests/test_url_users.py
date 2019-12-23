@@ -1,3 +1,8 @@
+"""
+Tests for endpoints:
+ - /users/
+ - /users/<int:pk>/
+"""
 from django.urls import reverse
 from rest_framework import status
 
@@ -6,7 +11,13 @@ from booking.tests.helper import LoggedInTestCase
 
 
 class UsersDetailURLPositiveTestCase(LoggedInTestCase):
-    def test_url_users_detail_positive_GET_user(self):
+    """
+    Positive test case for user detail: /users/<int:pk>/
+    """
+    def test_url_users_detail_positive_get_user(self):
+        """
+        Positive test checks response for GET request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         expected_data = {
@@ -18,7 +29,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_GET_admin_self(self):
+    def test_url_users_detail_positive_get_admin_self(self):
+        """
+        Positive test checks response for admin's GET request to /users/<self>/
+        """
         url = reverse('user-detail', args=[self.admin.pk])
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_data = {
@@ -32,7 +46,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_GET_admin_user(self):
+    def test_url_users_detail_positive_get_admin_user(self):
+        """
+        Positive test checks response for admin's GET request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_data = {
@@ -46,7 +63,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_PUT_user(self):
+    def test_url_users_detail_positive_put_user(self):
+        """
+        Positive test checks response for user's PUT request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         another_email = 'another_email@test.com'
         another_password = 'another password'
@@ -65,7 +85,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(user.email, another_email)
         self.assertTrue(user.check_password(another_password))
 
-    def test_url_users_detail_positive_PUT_admin_self(self):
+    def test_url_users_detail_positive_put_admin_self(self):
+        """
+        Positive test checks response for admin's PUT request to /users/<self>/
+        """
         url = reverse('user-detail', args=[self.admin.pk])
         another_email = 'another_email@test.com'
         another_password = 'another password'
@@ -89,7 +112,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.data, expected_data)
         self.assertTrue(admin.check_password(another_password))
 
-    def test_url_users_detail_positive_PUT_admin_user(self):
+    def test_url_users_detail_positive_put_admin_user(self):
+        """
+        Positive test checks response for admin's PUT request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         another_email = 'another_email@test.com'
         another_password = 'another password'
@@ -113,7 +139,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.data, expected_data)
         self.assertTrue(user.check_password(another_password))
 
-    def test_url_users_detail_positive_PATCH_user(self):
+    def test_url_users_detail_positive_patch_user(self):
+        """
+        Positive test checks response for user's PATCH request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         another_email = 'another_email@test.com'
         input_data = {
@@ -129,7 +158,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_PATCH_admin_self(self):
+    def test_url_users_detail_positive_patch_admin_self(self):
+        """
+        Positive test checks response for admin's PATCH request to /users/<self>/
+        """
         url = reverse('user-detail', args=[self.admin.pk])
         another_email = 'another_email@test.com'
         input_data = {
@@ -147,7 +179,10 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_PATCH_admin_user(self):
+    def test_url_users_detail_positive_patch_admin_user(self):
+        """
+        Positive test checks response for admin's PATCH request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         another_email = 'another_email@test.com'
         input_data = {
@@ -165,23 +200,36 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    def test_url_users_detail_positive_DELETE_user(self):
+    def test_url_users_detail_positive_delete_user(self):
+        """
+        Positive test checks response for user's DELETE request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
-        self.assertContains(response=response, text='User is inactive', status_code=status.HTTP_401_UNAUTHORIZED)
+        self.assertContains(response=response,
+                            text='User is inactive',
+                            status_code=status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_users_detail_positive_DELETE_admin_self(self):
+    def test_url_users_detail_positive_delete_admin_self(self):
+        """
+        Positive test checks response for admin's DELETE request to /users/<self>/
+        """
         url = reverse('user-detail', args=[self.admin.pk])
         response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        self.assertContains(response=response, text='User is inactive', status_code=status.HTTP_401_UNAUTHORIZED)
+        self.assertContains(response=response,
+                            text='User is inactive',
+                            status_code=status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_users_detail_positive_DELETE_admin_user(self):
+    def test_url_users_detail_positive_delete_admin_user(self):
+        """
+        Positive test checks response for admin's DELETE request to /users/<int:pk>/
+        """
         url = reverse('user-detail', args=[self.user.pk])
         response = self.client.delete(path=url, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -199,22 +247,33 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
 
 
 class UsersDetailURLNegativeTestCase(LoggedInTestCase):
+    """
+    Negative test case for user detail: /users/<int:pk>/
+    """
     def setUp(self) -> None:
-        self.second_user = CustomUser.objects.create_user(email='second@test.com', password='password')
-        self.second_user.save()
+        self.second_user = self._create_user(email='second@test.com', password='password')
         super(UsersDetailURLNegativeTestCase, self).setUp()
 
-    def test_url_users_detail_negative_GET_unauthorized(self):
+    def test_url_users_detail_negative_get_unauthorized(self):
+        """
+        Negative test checks that unauthorized user cannot get user detail via GET request
+        """
         url = reverse('user-detail', args=[self.user.pk])
         response = self.client.get(path=url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_url_users_detail_negative_GET_another_user(self):
+    def test_url_users_detail_negative_get_another_user(self):
+        """
+        Negative test checks that authorized user cannot get other user's detail via GET request
+        """
         url = reverse('user-detail', args=[self.second_user.pk])
         response = self.client.get(path=url, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_url_users_detail_negative_PUT_wrong_email_user(self):
+    def test_url_users_detail_negative_put_wrong_email_user(self):
+        """
+        Negative test checks that user cannot reuse someone's else email
+        """
         url = reverse('user-detail', args=[self.user.pk])
         input_data = {
             'email': self.second_user.email,
@@ -224,7 +283,10 @@ class UsersDetailURLNegativeTestCase(LoggedInTestCase):
                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_users_detail_negative_PUT_wrong_email_admin(self):
+    def test_url_users_detail_negative_put_wrong_email_admin(self):
+        """
+        Negative test checks that admin cannot reuse someone's else email
+        """
         url = reverse('user-detail', args=[self.user.pk])
         input_data = {
             'email': self.second_user.email,
@@ -234,7 +296,10 @@ class UsersDetailURLNegativeTestCase(LoggedInTestCase):
                                    HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_users_detail_negative_PUT_not_all_fields(self):
+    def test_url_users_detail_negative_put_not_all_fields(self):
+        """
+        Negative test checks that email and passwords required
+        """
         url = reverse('user-detail', args=[self.user.pk])
         data = {
             'email': 'changed_email@test.com'
@@ -245,6 +310,9 @@ class UsersDetailURLNegativeTestCase(LoggedInTestCase):
 
 
 class UsersListURLPositiveTestCase(LoggedInTestCase):
+    """
+    Positive test case for user list: /users/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('user-list')
         self.another_user_credentials = {
@@ -255,8 +323,12 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         }
         super(UsersListURLPositiveTestCase, self).setUp()
 
-    def test_url_users_list_positive_GET_user(self):
-        response = self.client.get(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+    def test_url_users_list_positive_get_user(self):
+        """
+        Positive test checks response for user's GET request to /users/
+        """
+        response = self.client.get(path=self.url_list,
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         expected_result = {
             'id': self.user.pk,
             'email': self.user.email,
@@ -268,8 +340,12 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         self.assertEqual(len(data), 1)
         self.assertDictEqual(dict(data[0]), expected_result)
 
-    def test_url_users_list_positive_GET_admin(self):
-        response = self.client.get(path=self.url_list, HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+    def test_url_users_list_positive_get_admin(self):
+        """
+        Positive test checks response for admin's GET request to /users/
+        """
+        response = self.client.get(path=self.url_list,
+                                   HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         expected_result = [
             {
                 'id': self.user.pk,
@@ -296,7 +372,10 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
             with self.subTest(given_user=given_user, expected_user=expected_user):
                 self.assertDictEqual(given_user, expected_user)
 
-    def test_url_users_list_positive_POST_unauthorized(self):
+    def test_url_users_list_positive_post_unauthorized(self):
+        """
+        Positive test checks response for anonymous user POST (sign up) request to /users/
+        """
         email = self.another_user_credentials['email']
         password = self.another_user_credentials['password']
         response = self.client.post(path=self.url_list, data=self.another_user_credentials)
@@ -313,7 +392,10 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         }
         self.assertDictEqual(response.data, expected_response)
 
-    def test_url_users_list_positive_POST_admin(self):
+    def test_url_users_list_positive_post_admin(self):
+        """
+        Positive test checks response for admin's POST (sign up) request to /users/
+        """
         email = self.another_user_credentials['email']
         password = self.another_user_credentials['password']
         response = self.client.post(path=self.url_list, data=self.another_user_credentials,
@@ -336,17 +418,26 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
 
 
 class UsersListURLNegativeTestCase(LoggedInTestCase):
+    """
+    Negative test checks response for user's GET request to /users/
+    """
     def setUp(self) -> None:
         self.url_list = reverse('user-list')
         super(UsersListURLNegativeTestCase, self).setUp()
 
-    def test_url_users_list_negative_GET_unauthorized(self):
+    def test_url_users_list_negative_get_unauthorized(self):
+        """
+        Negative test checks that unauthorised uer cannot see any user information
+        """
         response = self.client.get(path=self.url_list)
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.data.get('results', None))
         self.assertEqual(response.data['results'], [])
 
-    def test_url_users_list_negative_POST_invalid_email(self):
+    def test_url_users_list_negative_post_invalid_email(self):
+        """
+        Negative test checks that anonymous user cannot signup with invalid credentials
+        """
         credentials = {
             'email': 'invalid',
             'password': 'password',
@@ -354,14 +445,20 @@ class UsersListURLNegativeTestCase(LoggedInTestCase):
         response = self.client.post(path=self.url_list, data=credentials)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_users_list_negative_POST_missed_password(self):
+    def test_url_users_list_negative_post_missed_password(self):
+        """
+        Negative test checks password required during signing up
+        """
         credentials = {
             'email': 'test_user@test.com',
         }
         response = self.client.post(path=self.url_list, data=credentials)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_url_users_list_negative_POST_existing_email(self):
+    def test_url_users_list_negative_post_existing_email(self):
+        """
+        Negative test checks that user cannot sign up with someone's else email
+        """
         credentials = {
             'email': self.user.email,
             'password': 'password',
