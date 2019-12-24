@@ -2,6 +2,7 @@
 Booking app serializers
 """
 import datetime as dt
+from collections import defaultdict
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -81,19 +82,24 @@ class ShowingSerializer(ModelSerializer):
 
     def validate(self, attrs):
         date_time = attrs.get('date_time', None)
-        errors = dict()
+        errors = defaultdict(list)
 
         if date_time is None and any([not self.partial, self.instance is None]):
-            errors.setdefault('date_time', []).append('This field is required')
+            errors['date_time'].append('This field is required')
         elif date_time is None:
             return super(ShowingSerializer, self).validate(attrs=attrs)
         else:
+            movie = attrs.get('movie', None)
+            movie = movie or (self.instance.movie if self.instance else None)
+            if movie and date_time.year < movie.premiere_year:
+                errors['date_time'].append('Showing date cannot be before movie\'s premiere')
+
             time_min = dt.datetime.strptime(CINEMA_EARLIEST_TIME, '%H:%M').time()
             time_max = dt.datetime.strptime(CINEMA_LATEST_TIME, '%H:%M').time()
             if not time_min <= date_time.time() <= time_max:
-                errors.setdefault('date_time', []).append(f"Time value should be in interval "
-                                                          f"[{time_min.isoformat()}, "
-                                                          f"{time_max.isoformat()}]")
+                errors['date_time'].append(f"Time value should be in interval "
+                                           f"[{time_min.isoformat()}, "
+                                           f"{time_max.isoformat()}]")
             latest_showings = Showing.objects.filter(hall=attrs.get('hall', None),
                                                      date_time__lte=date_time)
             latest_showing = latest_showings.order_by('-date_time').first()
@@ -101,12 +107,15 @@ class ShowingSerializer(ModelSerializer):
                 service_time = dt.timedelta(minutes=CINEMA_CLEANING_PERIOD_MINUTES) + \
                                dt.timedelta(minutes=CINEMA_COMMERCIAL_PERIOD_MINUTES)
                 duration = latest_showing.movie.duration
-                start_time = latest_showing.date_time + dt.timedelta(minutes=duration) + \
-                             service_time
+                start_time = \
+                    latest_showing.date_time + \
+                    dt.timedelta(minutes=duration) + \
+                    service_time
+
                 if start_time > date_time:
-                    errors.setdefault('date_time', []).append(f'Hall is busy by showing '
-                                                              f'{latest_showing} and it will be '
-                                                              f'free at {start_time.isoformat()}')
+                    errors['date_time'].append(f'Hall is busy by showing '
+                                               f'{latest_showing} and it will be '
+                                               f'free at {start_time.isoformat()}')
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
