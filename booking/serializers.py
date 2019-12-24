@@ -145,6 +145,32 @@ class TicketBaseSerializer(ModelSerializer):
         """Returns payment receipt"""
         return bool(obj.receipt)
 
+    def validate(self, attrs):
+        errors = defaultdict(list)
+        row_number = attrs.get('row_number', None) or \
+                     (self.instance.row_number if self.instance else None)
+        seat_number = attrs.get('seat_number', None) or \
+                     (self.instance.seat_number if self.instance else None)
+        if not (row_number and seat_number):
+            error_message = 'Both fields \'row_number\', \'seat_number\' should be specified'
+            errors['row_number'].append(error_message)
+            errors['seat_number'].append(error_message)
+
+        showing = attrs.get('showing', None) or self.instance.showing
+        if row_number and showing.hall.rows_count < row_number:
+            errors['row_number'].append(f'Cannot be more than {showing.hall.rows_count}')
+        if seat_number and showing.hall.rows_size < seat_number:
+            errors['seat_number'].append(f'Cannot be more than {showing.hall.rows_size}')
+        ticket = Ticket.objects.filter(showing=showing,
+                                       row_number=row_number,
+                                       seat_number=seat_number).first()
+        if ticket and self.instance and self.instance.pk != ticket.pk:
+            errors['error'].append('Current place is busy. Choose another place')
+
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
 
 class TicketSerializer(TicketBaseSerializer):
     """Ticket serializer"""
@@ -152,7 +178,7 @@ class TicketSerializer(TicketBaseSerializer):
     class Meta:
         model = TicketBaseSerializer.Meta.model
         fields = TicketBaseSerializer.Meta.fields
-        read_only_fields = fields
+        read_only_fields = list(set(fields) - {'row_number', 'seat_number'})
 
 
 class TicketCreateSerializer(TicketBaseSerializer):
