@@ -134,3 +134,131 @@ class TicketsDetailPositiveTestCase(TicketsBaseTestCase):
                                       HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Ticket.objects.all().count(), 0)
+
+
+class TicketsDetailNegativeTestCase(TicketsBaseTestCase):
+    """
+    Negative test case for ticket detail: /tickets/<int:pk>/
+    """
+    def test_url_tickets_detail_negative_get_unknown(self):
+        """
+        Negative test checks that unauthorized users have no access to tickets
+        """
+        with self.subTest():
+            response = self.client.get(path=reverse('ticket-detail', args=[self.ticket.pk]))
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        with self.subTest():
+            response = self.client.get(path=reverse('ticket-detail', args=[1000]))
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_tickets_detail_negative_put_user(self):
+        """
+        Negative test checks that users can modify only their seats via PUT requests
+        """
+        input_data = {
+            'showing': self.ticket.showing.pk + 1,
+            'user': self.admin.pk,
+            'date_time': self.ticket.date_time - datetime.timedelta(3),
+            'row_number': 2,
+            'seat_number': 2,
+            'receipt': 'Fake receipt',
+            'paid': True,
+        }
+        date_time = self.ticket.date_time.isoformat()[:-3] + self.ticket.date_time.isoformat()[-2:]
+        expected_data = {
+            'id': self.ticket.pk,
+            'showing': self.ticket.showing.pk,
+            'row_number': 2,
+            'seat_number': 2,
+            'price': Decimal(self.ticket.showing.price),
+            'user': self.ticket.user.pk,
+            'date_time': date_time,
+            'paid': False,
+            'receipt': self.ticket.receipt,
+        }
+        response = self.client.put(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                   data=input_data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, expected_data)
+
+    def test_url_tickets_detail_negative_put_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify tickets via PUT requests
+        """
+        input_data = {
+            'showing': self.ticket.showing.pk + 1,
+            'user': self.admin.pk,
+            'date_time': self.ticket.date_time - datetime.timedelta(3),
+            'row_number': 2,
+            'seat_number': 2,
+            'receipt': 'Fake receipt',
+            'paid': True,
+        }
+        response = self.client.put(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                   data=input_data,
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_ticket_detail_negative_patch_incorrect_input(self):
+        """
+        Negative test checks that users cannot book not existing place
+        """
+        input_data = {
+            'row_number': self.ticket.showing.hall.rows_count + 100,
+        }
+        response = self.client.patch(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                     data=input_data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_ticket_detail_negative_patch_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot modify tickets via PATCH requests
+        """
+        input_data = {
+            'row_number': self.ticket.showing.hall.rows_count + 100,
+        }
+        response = self.client.patch(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                     data=input_data,
+                                     content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_url_tickets_detail_negative_delete_user(self):
+        """
+        Negative test checks that users cannot delete someone's else ticket
+        """
+        ticket = Ticket(showing=self.ticket.showing,
+                        user=self.admin,
+                        row_number=2,
+                        seat_number=2,
+                        date_time=self.ticket.date_time)
+        ticket.save()
+        response = self.client.delete(path=reverse('ticket-detail', args=[ticket.pk]),
+                                      HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Ticket.objects.all().count(), 2)
+        ticket.delete()
+
+    def test_url_tickets_detail_negative_delete_unauthorized(self):
+        """
+        Negative test checks that anonymous users cannot delete tickets
+        """
+        response = self.client.delete(path=reverse('ticket-detail', args=[self.ticket.pk]))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Ticket.objects.all().count(), 1)
+
+    def test_url_tickets_detail_negative_delete_paid_ticket(self):
+        """
+        Negative test checks that it's impossible to delete paid ticket
+        """
+        self.ticket.receipt = 'receipt'
+        self.ticket.save()
+
+        response = self.client.delete(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                      HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_423_LOCKED)
