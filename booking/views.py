@@ -296,6 +296,12 @@ class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
     queryset = models.Ticket.objects.all()
     user_field = 'user'
 
+    def delete(self, request, *args, **kwargs):
+        ticket = self.get_object()
+        if ticket.receipt:
+            return Response(data='Paid ticket cannot be removed', status=status.HTTP_423_LOCKED)
+        return super(TicketsDetail, self).delete(request, *args, **kwargs)
+
 
 class PayForTicket(FilterByUserMixin, UpdateAPIView):
     """
