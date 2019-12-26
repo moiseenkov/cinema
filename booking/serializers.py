@@ -6,6 +6,7 @@ from collections import defaultdict
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
+from rest_framework_simplejwt.utils import datetime_to_epoch
 
 from booking.models import CustomUser, Hall, Movie, Showing, Ticket
 from cinema.settings import CINEMA_EARLIEST_TIME, \
@@ -185,7 +186,7 @@ class TicketCreateSerializer(TicketBaseSerializer):
     """Creating ticket serializer"""
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     date_time = serializers.HiddenField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now()))
+        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)))
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
@@ -195,7 +196,7 @@ class TicketCreateSerializer(TicketBaseSerializer):
 class TicketCreateAdminSerializer(TicketBaseSerializer):
     """Admin's creating ticket serializer"""
     date_time = serializers.HiddenField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now()))
+        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)))
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
