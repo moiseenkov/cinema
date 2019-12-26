@@ -6,7 +6,6 @@ from collections import defaultdict
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-from rest_framework_simplejwt.utils import datetime_to_epoch
 
 from booking.models import CustomUser, Hall, Movie, Showing, Ticket
 from cinema.settings import CINEMA_EARLIEST_TIME, \
@@ -148,25 +147,35 @@ class TicketBaseSerializer(ModelSerializer):
 
     def validate(self, attrs):
         errors = defaultdict(list)
-        row_number = attrs.get('row_number', None) or \
-                     (self.instance.row_number if self.instance else None)
-        seat_number = attrs.get('seat_number', None) or \
-                     (self.instance.seat_number if self.instance else None)
+
+        # Validate seats
+        row_number = \
+            attrs.get('row_number', None) or \
+            (self.instance.row_number if self.instance else None)
+        seat_number = \
+            attrs.get('seat_number', None) or \
+            (self.instance.seat_number if self.instance else None)
         if not (row_number and seat_number):
             error_message = 'Both fields \'row_number\', \'seat_number\' should be specified'
             errors['row_number'].append(error_message)
             errors['seat_number'].append(error_message)
 
-        showing = attrs.get('showing', None) or self.instance.showing
-        if row_number and showing.hall.rows_count < row_number:
-            errors['row_number'].append(f'Cannot be more than {showing.hall.rows_count}')
-        if seat_number and showing.hall.rows_size < seat_number:
-            errors['seat_number'].append(f'Cannot be more than {showing.hall.rows_size}')
+        # Validate showing and hall
+        showing = attrs.get('showing', None) or (self.instance.showing if self.instance else None)
+        if showing is None:
+            errors['showing'] = 'This field is required'
+        else:
+            if row_number and showing.hall.rows_count < row_number:
+                errors['row_number'].append(f'Cannot be more than {showing.hall.rows_count}')
+            if seat_number and showing.hall.rows_size < seat_number:
+                errors['seat_number'].append(f'Cannot be more than {showing.hall.rows_size}')
+
+        # Validate the place is free
         ticket = Ticket.objects.filter(showing=showing,
                                        row_number=row_number,
                                        seat_number=seat_number).first()
         if ticket and self.instance and self.instance.pk != ticket.pk:
-            errors['error'].append('Current place is busy. Choose another place')
+            errors['non-field errors'].append('Current place is busy. Choose another place')
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -175,34 +184,16 @@ class TicketBaseSerializer(ModelSerializer):
 
 class TicketSerializer(TicketBaseSerializer):
     """Ticket serializer"""
-
     class Meta:
         model = TicketBaseSerializer.Meta.model
         fields = TicketBaseSerializer.Meta.fields
         read_only_fields = list(set(fields) - {'row_number', 'seat_number'})
 
 
-class TicketCreateSerializer(TicketBaseSerializer):
+class TicketCreateSerializer(TicketSerializer):
     """Creating ticket serializer"""
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    date_time = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)),
-        read_only=True
-    )
-
     class Meta:
-        model = TicketBaseSerializer.Meta.model
-        fields = TicketBaseSerializer.Meta.fields
-
-
-class TicketCreateAdminSerializer(TicketBaseSerializer):
-    """Admin's creating ticket serializer"""
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    date_time = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)),
-        read_only=True
-    )
-
-    class Meta:
-        model = TicketBaseSerializer.Meta.model
-        fields = TicketBaseSerializer.Meta.fields
+        model = TicketSerializer.Meta.model
+        fields = TicketSerializer.Meta.fields
+        read_only_fields = \
+            list(set(TicketSerializer.Meta.read_only_fields) - {'showing', 'user', 'date_time'})
