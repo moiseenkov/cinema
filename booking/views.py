@@ -1,6 +1,7 @@
 """
 Booking app views module
 """
+import datetime
 import uuid
 
 import django_filters
@@ -270,6 +271,7 @@ class TicketsListView(FilterByUserMixin, ListCreateAPIView):
     Url allows authenticated users to view list of their tickets and book new tickets.
     Admins can view all tickets.
     """
+    serializer_class = serializers.TicketSerializer
     permission_classes = [IsAuthenticated]
     queryset = models.Ticket.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
@@ -278,10 +280,24 @@ class TicketsListView(FilterByUserMixin, ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
-            if self.request.user and self.request.user.is_staff:
-                return serializers.TicketCreateAdminSerializer
             return serializers.TicketCreateSerializer
         return serializers.TicketSerializer
+
+    def create(self, request, *args, **kwargs):  # pylint: disable=unused-argument
+        data = request.data.copy()
+
+        if not request.user.is_staff or request.user.is_staff and data.get('user', None) is None:
+            data['user'] = request.user.pk
+
+        date_time = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        date_time = date_time[:-3] + date_time[-2:]
+        data['date_time'] = date_time
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class TicketsDetail(FilterByUserMixin, RetrieveUpdateDestroyAPIView):
