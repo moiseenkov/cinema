@@ -73,12 +73,8 @@ class TicketsDetailPositiveTestCase(TicketsBaseTestCase):
         ticket = self.ticket
         input_data = {
             'showing': ticket.showing.pk,
-            'date_time': ticket.date_time.isoformat()[:-3] + ticket.date_time.isoformat()[-2:],
             'row_number': 2,
             'seat_number': 2,
-            'paid': False,
-            'receipt': '',
-            'user': self.user.pk,
         }
         response = self.client.put(path=reverse('ticket-detail', args=[ticket.pk]),
                                    data=input_data,
@@ -190,12 +186,8 @@ class TicketsDetailNegativeTestCase(TicketsBaseTestCase):
         """
         input_data = {
             'showing': self.ticket.showing.pk + 1,
-            'user': self.admin.pk,
-            'date_time': self.ticket.date_time - datetime.timedelta(3),
             'row_number': 2,
             'seat_number': 2,
-            'receipt': 'Fake receipt',
-            'paid': True,
         }
         response = self.client.put(path=reverse('ticket-detail', args=[self.ticket.pk]),
                                    data=input_data,
