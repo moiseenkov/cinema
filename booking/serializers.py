@@ -185,8 +185,10 @@ class TicketSerializer(TicketBaseSerializer):
 class TicketCreateSerializer(TicketBaseSerializer):
     """Creating ticket serializer"""
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    date_time = serializers.HiddenField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)))
+    date_time = serializers.DateTimeField(
+        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)),
+        read_only=True
+    )
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
@@ -195,8 +197,11 @@ class TicketCreateSerializer(TicketBaseSerializer):
 
 class TicketCreateAdminSerializer(TicketBaseSerializer):
     """Admin's creating ticket serializer"""
-    date_time = serializers.HiddenField(
-        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)))
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    date_time = serializers.DateTimeField(
+        default=serializers.CreateOnlyDefault(dt.datetime.now(tz=dt.timezone.utc)),
+        read_only=True
+    )
 
     class Meta:
         model = TicketBaseSerializer.Meta.model
