@@ -25,7 +25,7 @@ class TicketsBaseTestCase(LoggedInTestCase):
         self.hall = Hall(name='Hall', rows_count=16, rows_size=20)
         self.hall.save()
         show_time = \
-            datetime.datetime(2019, 12, 24, 10, 0, tzinfo=datetime.timezone.utc) + \
+            datetime.datetime(2019, 12, 24, 10, 0, 0, 1, tzinfo=datetime.timezone.utc) + \
             datetime.timedelta(10)
         self.showing = Showing(hall=self.hall,
                                movie=self.movie,

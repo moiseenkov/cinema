@@ -35,7 +35,7 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         Positive test checks response for GET request to /showings/<int:pk>/
         """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0, 0, 1,
                                                       tzinfo=datetime.timezone.utc),
                           price='9.99')
         showing.save()
@@ -56,7 +56,7 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         Positive test checks response for admin's PUT request to /showings/<int:pk>/
         """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0, 10, 10,
                                                       tzinfo=datetime.timezone.utc),
                           price='9.99')
         showing.save()
@@ -64,7 +64,7 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         input_data = {
             'hall': showing.hall.pk,
             'movie': showing.movie.pk,
-            'date_time': showing.date_time,
+            'date_time': showing.date_time.isoformat(),
             'price': '4.99'
         }
         response = self.client.put(path=reverse('showing-detail', args=[showing.pk]),
@@ -86,7 +86,7 @@ class ShowingsDetailPositiveTestCase(ShowingsBaseTestCase):
         Positive test checks response for admin's PATCH request to /showings/<int:pk>/
         """
         showing = Showing(hall=self.hall, movie=self.movie,
-                          date_time=datetime.datetime(2019, 11, 25, 9, 0,
+                          date_time=datetime.datetime(2019, 11, 25, 9, 0, 0, 1,
                                                       tzinfo=datetime.timezone.utc),
                           price='9.99')
         showing.save()
@@ -247,7 +247,7 @@ class ShowingsListPositiveTestCase(ShowingsBaseTestCase):
         super(ShowingsListPositiveTestCase, self).setUp()
         self.url_list = reverse('showing-list')
         showings = [Showing(hall_id=hall_id, movie=self.movie,
-                            date_time=datetime.datetime(2019, 12, 14, 10, 0,
+                            date_time=datetime.datetime(2019, 12, 14, 10, 0, 0, 1,
                                                         tzinfo=datetime.timezone.utc).isoformat(),
                             price=9.99) for hall_id in [1, 2, 3]]
         Showing.objects.bulk_create(showings)
