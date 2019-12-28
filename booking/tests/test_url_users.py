@@ -310,6 +310,38 @@ class UsersDetailURLNegativeTestCase(LoggedInTestCase):
                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_url_users_detail_negative_user_becomes_admin_patch(self):
+        """
+        Negative test checks that user cannot become admin
+        """
+        data = {
+            'is_staff': True,
+        }
+        response = self.client.patch(path=reverse('user-detail', args=[self.user.pk]),
+                                     data=data,
+                                     content_type='application/json',
+                                     HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_staff)
+
+    def test_url_users_detail_negative_user_becomes_admin_put(self):
+        """
+        Negative test checks that user cannot become admin
+        """
+        data = {
+            'email': 'new_email@test.com',
+            'password': 'password',
+            'is_staff': True,
+        }
+        response = self.client.put(path=reverse('user-detail', args=[self.user.pk]),
+                                   data=data,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_staff)
+
 
 class UsersListURLPositiveTestCase(LoggedInTestCase):
     """
