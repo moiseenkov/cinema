@@ -282,7 +282,6 @@ class TicketsListPositiveTestCase(TicketsBaseTestCase):
         """
         Positive test checks that user can GET their tickets
         """
-        ticket = self.ticket
         response = self.client.get(path=self.url_list,
                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -511,12 +510,34 @@ class TicketsListNegativeTestCase(TicketsBaseTestCase):
             datetime.datetime.fromisoformat(date_time[:-2] + ':' + date_time[-2:])
         self.assertTrue(time_diff <= datetime.timedelta(seconds=2))
 
-    def test_url_tickets_list_negative_post_fraud_receipt(self):
+    def test_url_tickets_list_negative_post_fraud_receipt_user(self):
         """
         Negative test checks that it's impossible to fraud with ticket's receipt
         """
+        data = {
+            'showing': self.ticket.showing.pk,
+            'row_number': 2,
+            'seat_number': 2,
+            'receipt': 'fake receipt',
+        }
+        response = self.client.post(path=self.url_list,
+                                    data=data,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['receipt'], '')
 
     def test_url_tickets_list_negative_post_book_for_another_user(self):
         """
         Negative test checks that users cannot book ticket for other users
         """
+        data = {
+            'showing': self.ticket.showing.pk,
+            'row_number': 2,
+            'seat_number': 2,
+            'user': self.admin.pk,
+        }
+        response = self.client.post(path=self.url_list,
+                                    data=data,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user'], self.user.pk)
