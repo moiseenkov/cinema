@@ -256,6 +256,52 @@ class TicketsDetailNegativeTestCase(TicketsBaseTestCase):
                                       HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
         self.assertEqual(response.status_code, status.HTTP_423_LOCKED)
 
+    def test_url_tickets_detail_negative_modify_paid_ticket(self):
+        """
+        Negative test checks that it's impossible to modify paid ticket
+        """
+        showtime = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=2)
+        showing = Showing(movie=self.movie,
+                          date_time=showtime,
+                          hall=self.hall,
+                          price='9.99')
+        showing.save()
+        changes = {
+            'showing': showing.pk,
+            'row_number': 1,
+            'seat_number': 1,
+            'user': self.admin.pk,
+        }
+
+        self.ticket.receipt = 'receipt: ticket paid'
+        self.ticket.save()
+        ticket_date_time = self.ticket.date_time
+        expected_data = {
+            'id': self.ticket.pk,
+            'showing': self.ticket.showing.pk,
+            'row_number': self.ticket.row_number,
+            'seat_number': self.ticket.seat_number,
+            'user': self.ticket.user.pk,
+            'paid': bool(self.ticket.receipt),
+            'receipt': self.ticket.receipt,
+            'date_time': ticket_date_time.isoformat()[:-3] + ticket_date_time.isoformat()[-2:],
+            'price': Decimal(self.ticket.showing.price)
+        }
+        response = self.client.put(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                   data=changes,
+                                   content_type='application/json',
+                                   HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, expected_data)
+
+        for field, new_value in changes.items():
+            response = self.client.patch(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                         data={field:new_value},
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertDictEqual(response.data, expected_data)
+
 
 class TicketsListPositiveTestCase(TicketsBaseTestCase):
     """
