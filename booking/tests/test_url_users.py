@@ -14,6 +14,7 @@ class UsersDetailURLPositiveTestCase(LoggedInTestCase):
     """
     Positive test case for user detail: /users/<int:pk>/
     """
+
     def test_url_users_detail_positive_get_user(self):
         """
         Positive test checks response for GET request to /users/<int:pk>/
@@ -250,6 +251,7 @@ class UsersDetailURLNegativeTestCase(LoggedInTestCase):
     """
     Negative test case for user detail: /users/<int:pk>/
     """
+
     def setUp(self) -> None:
         self.second_user = self._create_user(email='second@test.com', password='password')
         super(UsersDetailURLNegativeTestCase, self).setUp()
@@ -313,6 +315,7 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
     """
     Positive test case for user list: /users/
     """
+
     def setUp(self) -> None:
         self.url_list = reverse('user-list')
         self.another_user_credentials = {
@@ -416,11 +419,36 @@ class UsersListURLPositiveTestCase(LoggedInTestCase):
         }
         self.assertDictEqual(response.data, expected_response)
 
+    def test_url_users_list_positive_post_create_admin_by_admin(self):
+        """
+        Positive test checks that admin can create admin
+        """
+        credentials = {
+            'email': 'admin_by_admin@test.com',
+            'password': 'password',
+            'is_staff': True,
+            'is_active': True,
+        }
+        response = self.client.post(path=self.url_list, data=credentials,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        new_admin = CustomUser.objects.filter(pk=response.data['id']).first()
+        self.assertIsNotNone(new_admin)
+        expected_data = {
+            'id': new_admin.pk,
+            'email': credentials['email'],
+            'password': new_admin.password,
+            'is_staff': credentials['is_staff'],
+            'is_active': True,
+        }
+        self.assertDictEqual(response.data, expected_data)
+
 
 class UsersListURLNegativeTestCase(LoggedInTestCase):
     """
-    Negative test checks response for user's GET request to /users/
+    Negative test for /users/
     """
+
     def setUp(self) -> None:
         self.url_list = reverse('user-list')
         super(UsersListURLNegativeTestCase, self).setUp()
@@ -465,3 +493,19 @@ class UsersListURLNegativeTestCase(LoggedInTestCase):
         }
         response = self.client.post(path=self.url_list, data=credentials)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_url_users_list_negative_post_create_admin_user(self):
+        """
+        Negative test checks that user cannot create admin
+        """
+        credentials = {
+            'email': 'user_admin1@test.com',
+            'password': 'password',
+            'is_staff': True,
+        }
+        response = self.client.post(path=self.url_list,
+                                    data=credentials,
+                                    HTTP_AUTHORIZATION=f'Bearer {self.user_token}')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = CustomUser.objects.get(pk=response.data['id'])
+        self.assertEqual(user.is_staff, False)
