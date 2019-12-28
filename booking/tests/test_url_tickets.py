@@ -302,6 +302,20 @@ class TicketsDetailNegativeTestCase(TicketsBaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertDictEqual(response.data, expected_data)
 
+    def test_url_tickets_detail_reassign_ticket_to_another_user(self):
+        """
+        Negative test checks that it's impossible to reassign ticket to another user
+        """
+        owner = self.ticket.user
+        for token in [self.user_token, self.admin_token]:
+            response = self.client.patch(path=reverse('ticket-detail', args=[self.ticket.pk]),
+                                         data={'user':self.admin.pk},
+                                         content_type='application/json',
+                                         HTTP_AUTHORIZATION=f'Bearer {token}')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.ticket.refresh_from_db()
+            self.assertEqual(self.ticket.user, owner)
+
 
 class TicketsListPositiveTestCase(TicketsBaseTestCase):
     """
