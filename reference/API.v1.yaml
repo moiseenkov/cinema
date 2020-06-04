@@ -1,0 +1,40 @@
+openapi: 3.0.0
+info:
+  title: API
+  version: '1.0'
+servers:
+  - url: 'http://localhost:3000'
+paths:
+  /hr-services/api/menu-items:
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+              examples:
+                example-1: {}
+      operationId: get-hr-services-api-menu-items
+components:
+  schemas:
+    MenuItem:
+      title: MenuItem
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        name_verbose:
+          type: string
+        comment:
+          type: string
+        image:
+          type: string
+      required:
+        - name
+        - name_verbose
